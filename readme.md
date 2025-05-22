@@ -1,7 +1,7 @@
 # SUBCHAINE - Simulateur de Blockchain
 
 ## 📖 Description
-**SUBCHAINE** est un simulateur interactif de blockchain conçu pour l'apprentissage. Cette application web permet de découvrir les concepts fondamentaux de la blockchain à travers des fonctionnalités clés : création de wallets, minage de blocs, transactions sécurisées et visualisation de la blockchain.
+**SUBCHAINE** est un simulateur de blockchain. Cette application web permet de découvrir les concepts fondamentaux de la blockchain avec des fonctionnalités clés : création de wallets, minage de blocs, transactions sécurisées et visualisation de la blockchain.
 
 ---
 
