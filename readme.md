@@ -16,7 +16,7 @@ Avant de commencer, assurez-vous d'avoir installé :
 ## 🚀 Installation
 1. **Clonez le dépôt** :
     ```bash
-    git clone [URL_DU_REPO] BlockChain
+    git clone https://github.com/Subdij/BlockChain.git
     ```
 
 2. **Installez les dépendances** :
@@ -78,8 +78,3 @@ Avant de commencer, assurez-vous d'avoir installé :
 2. **Transactions** : Utilisez la page "Transaction" pour envoyer des fonds entre wallets.
 3. **Minage** : Sur la page "Mining", sélectionnez votre wallet et commencez le minage.
 4. **Visualisation** : Explorez la structure de la blockchain sur la page "Visualiser".
-
----
-
-## 📧 Support
-Pour toute question ou problème, veuillez contacter l'équipe de développement via [email@example.com](mailto:email@example.com).
