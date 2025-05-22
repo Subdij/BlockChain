@@ -1,67 +1,85 @@
 # SUBCHAINE - Simulateur de Blockchain
 
-## Description
-SUBCHAINE est un simulateur de blockchain interactif conçu à des fins éducatives. Cette application web permet aux utilisateurs de comprendre les concepts fondamentaux de la technologie blockchain en simulant toutes ses fonctionnalités essentielles : création de wallets, minage de blocs, transactions sécurisées, et visualisation de la blockchain.
+## 📖 Description
+**SUBCHAINE** est un simulateur interactif de blockchain conçu pour l'apprentissage. Cette application web permet de découvrir les concepts fondamentaux de la blockchain à travers des fonctionnalités clés : création de wallets, minage de blocs, transactions sécurisées et visualisation de la blockchain.
 
-## Prérequis
-Pour exécuter cette application, vous aurez besoin de:
-- Node.js (version 14.0 ou supérieure)
-- NPM (inclus avec Node.js)
-- Navigateur web moderne avec support JavaScript
+---
 
-## Installation
-1. Clonez ce dépôt dans le dossier de votre choix:
-    ```
+## ⚙️ Prérequis
+Avant de commencer, assurez-vous d'avoir installé :
+- **Node.js** (version 14.0 ou supérieure)
+- **NPM** (inclus avec Node.js)
+- Un navigateur web moderne avec support JavaScript
+
+---
+
+## 🚀 Installation
+1. **Clonez le dépôt** :
+    ```bash
     git clone [URL_DU_REPO] BlockChain
     ```
 
-2. Installez les dépendances JavaScript:
-    ```
+2. **Installez les dépendances** :
+    ```bash
     cd BlockChain
     npm install
     ```
 
-3. Les dépendances frontend sont déjà incluses via CDN:
-   - crypto-js (pour les fonctions de hachage)
-   - elliptic (pour la cryptographie à courbe elliptique)
+3. **Dépendances frontend** : Incluses via CDN :
+   - `crypto-js` : Fonctions de hachage
+   - `elliptic` : Cryptographie à courbe elliptique
 
-## Lancement de l'application
-1. Démarrez le serveur Node.js:
-    ```
+---
+
+## ▶️ Lancement de l'application
+1. **Démarrez le serveur Node.js** :
+    ```bash
     node server.js
     ```
-2. Accédez à l'application via votre navigateur:
-    ```
-    http://localhost:3000
-    ```
 
-## Structure du projet
-- `/public` - Contient les pages HTML, CSS et le JavaScript frontend
-  - `block.html` - Interface de minage
-  - `wallet.html` - Gestionnaire de wallets
-  - `transaction.html` - Création de transactions
-  - `blockchain-visualizer.html` - Visualiseur de la blockchain
-  - `cryptage.html` - Démonstration de cryptographie
-  - `SHA-256.html` - Démonstration de hachage
-- `server.js` - Serveur backend Node.js/Express
-- `package.json` - Configuration du projet et dépendances
+2. **Accédez à l'application** :
+    [http://localhost:3000](http://localhost:3000)
 
-## Fonctionnalités principales
-- Gestion de wallets avec paires de clés cryptographiques
-- Transactions sécurisées avec signature cryptographique
-- Minage de blocs avec Proof of Work et récompenses
-- Visualisation graphique de la blockchain
-- Communication en temps réel entre utilisateurs
-- Démonstrations pédagogiques des mécanismes cryptographiques
+---
 
-## Technologies utilisées
-- Backend: Node.js, Express
-- Frontend: HTML, CSS, JavaScript vanilla
-- Communication temps réel: Socket.io
-- Cryptographie: crypto-js, elliptic (courbe elliptique secp256k1)
+## 📂 Structure du projet
+- **`/public`** : Contient les fichiers frontend (HTML, CSS, JS)
+  - `block.html` : Interface de minage
+  - `wallet.html` : Gestion des wallets
+  - `transaction.html` : Création de transactions
+  - `blockchain-visualizer.html` : Visualisation de la blockchain
+  - `cryptage.html` : Démonstration de cryptographie
+  - `SHA-256.html` : Démonstration de hachage
+- **`server.js`** : Serveur backend (Node.js/Express)
+- **`package.json`** : Configuration du projet et dépendances
 
-## Guide d'utilisation
-1. **Création de wallet**: Accédez à la page "Wallet" et créez un wallet avec un pseudonyme
-2. **Transactions**: Utilisez la page "Transaction" pour envoyer des fonds entre wallets
-3. **Minage**: Sur la page "Mining", sélectionnez votre wallet et commencez le minage
-4. **Visualisation**: Explorez la structure de la blockchain sur la page "Visualiser"
+---
+
+## ✨ Fonctionnalités principales
+- **Gestion de wallets** : Création et gestion de paires de clés cryptographiques
+- **Transactions sécurisées** : Signatures cryptographiques
+- **Minage de blocs** : Proof of Work avec récompenses
+- **Visualisation graphique** : Structure de la blockchain
+- **Communication en temps réel** : Entre utilisateurs
+- **Démonstrations pédagogiques** : Mécanismes cryptographiques
+
+---
+
+## 🛠️ Technologies utilisées
+- **Backend** : Node.js, Express
+- **Frontend** : HTML, CSS, JavaScript vanilla
+- **Temps réel** : Socket.io
+- **Cryptographie** : crypto-js, elliptic (secp256k1)
+
+---
+
+## 📝 Guide d'utilisation
+1. **Création de wallet** : Accédez à la page "Wallet" pour créer un wallet avec un pseudonyme.
+2. **Transactions** : Utilisez la page "Transaction" pour envoyer des fonds entre wallets.
+3. **Minage** : Sur la page "Mining", sélectionnez votre wallet et commencez le minage.
+4. **Visualisation** : Explorez la structure de la blockchain sur la page "Visualiser".
+
+---
+
+## 📧 Support
+Pour toute question ou problème, veuillez contacter l'équipe de développement via [email@example.com](mailto:email@example.com).
