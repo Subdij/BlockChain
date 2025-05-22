@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Blockchain Transaction avec Ajustement Automatique de la Difficulté
+    </title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/elliptic/6.5.4/elliptic.min.js"></script>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", sans-serif;
+      }
+      body {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 80px 20px 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 1rem 2rem;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+      }
+
+      .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 2rem;
+      }
+
+      .nav-links a {
+        color: #4a5568;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        position: relative;
+        font-size: 1.2rem;
+      }
+
+      .nav-links a::after {
+        content: "";
+        position: absolute;
+        bottom: -5px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: #667eea;
+        transition: width 0.3s ease;
+      }
+
+      .nav-links a:hover::after {
+        width: 100%;
+      }
+
+      .nav-links a.active {
+        color: #667eea;
+      }
+
+      nav .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        width: 100%;
+        max-width: 60%;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1.5rem;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        width: 100%;
+      }
+      .simulation-container {
+        flex: 1;
+        min-width: 300px;
+      }
+      h1,
+      h2 {
+        text-align: center;
+        color: #2d3748;
+        margin-bottom: 1rem;
+      }
+      .section-title {
+        margin: 1rem 0;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #2d3748;
+      }
+      .input-group {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #4a5568;
+        font-weight: 600;
+      }
+      input,
+      textarea {
+        min-width: 100%;
+        max-width: 100%;
+        min-height: 71px;
+        max-height: 71px;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+      }
+      
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+      button:hover {
+        transform: scale(1.02);
+        opacity: 0.9;
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      pre {
+        background: #f7fafc;
+        padding: 1rem;
+        border-radius: 10px;
+        max-height: 250px;
+        overflow-y: auto;
+      }
+      .wallet-selector {
+        min-width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 1rem;
+        background-color: white;
+        transition: border-color 0.3s ease;
+        min-height: 50px;
+        max-height: 50px;
+        cursor: pointer;
+      }
+      
+      .wallet-selector:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      
+      .wallet-selector option {
+        padding: 10px;
+      }
+      
+      .logo {
+        font-weight: 700;
+        color: #2d3748;
+        text-decoration: none;
+        font-size: 1.8rem;
+        transition: all 0.3s ease;
+        margin-right: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        padding: 0.2rem 1rem;
+      }
+      
+      .logo:hover {
+        transform: scale(1.05);
+      }
+      
+      
+      .input-with-button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      .input-with-button input {
+        flex: 1;
+      }
+      
+      
+      .paste-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 15px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        height: 50px;
+        white-space: nowrap;
+      }
+      
+      .paste-button:hover {
+        transform: scale(1.02);
+        opacity: 0.9;
+      }
+      
+      .paste-button:active {
+        transform: scale(0.98);
+      }
+
+      
+      .input-with-button {
+        display: flex;
+        align-items: center;
+        width: 100%;
+      }
+      
+      .input-with-button input {
+        flex: 1;
+        margin-right: 10px;
+        min-width: auto; 
+      }
+      
+      
+      .paste-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 15px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        height: 50px;
+        width: auto;
+        min-width: auto;
+        margin-bottom: 0; 
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-container">
+        <a href="./index.html" class="logo">SUBCHAINE</a>
+        <div class="nav-links">
+          <a href="./SHA-256.html">SHA-256 Hash</a>
+          <a href="./cryptage.html">Encrypt hash</a>
+          <a href="./transaction.html" class="active">Transaction</a>
+          <a href="./wallet.html">Wallet</a>
+          <a href="./block.html">Mining</a>
+          <a href="./blockchain-visualizer.html">Visualiser</a>
+        </div>
+      </div>
+    </nav>
+    <div id="wrapper">
+      
+      <div class="container simulation-container">
+        <h1>Blockchain Transaction</h1>
+        
+        <div class="section-title">Transaction</div>
+        <div class="input-group">
+          <label>Sélectionner votre wallet :</label>
+          <select id="walletSelector" class="wallet-selector">
+            <option value="">-- Choisir un wallet --</option>
+            
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Destinataire (clé publique) :</label>
+          <div class="input-with-button">
+            <input
+              type="text"
+              id="txTo"
+              placeholder="Saisissez la clé publique du destinataire"
+            />
+            <button id="pasteBtnToField" class="paste-button">Coller</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Montant :</label>
+          <input
+            type="number"
+            id="txAmount"
+            placeholder="Montant à transférer"
+          />
+        </div>
+        
+        <button onclick="createTransaction()">
+          Créer Transaction
+        </button>
+        <div class="input-group">
+          <label>Signature de la transaction :</label>
+          <textarea id="txSignature" readonly></textarea>
+        </div>
+
+        <div class="section-title">Mempool</div>
+        <pre id="mempoolDisplay">Aucune transaction</pre>
+      </div>
+    </div>
+
+    <script>
+      // Connexion à socket.io
+      const socket = io();
+
+      // Initialisation de la librairie elliptic
+      const ec = new elliptic.ec("secp256k1");
+
+      // Génération automatique de la clé de transaction au chargement
+      let keyPair = ec.genKeyPair();
+      
+      // Mempool pour les transactions en attente
+      let mempool = [];
+
+      // Paramètres d'ajustement de difficulté
+      const targetBlockTime = 10; // cible en secondes par bloc
+      const adjustmentInterval = 5; // ajustement tous les 5 blocs
+
+      // Difficulté initiale (déplacée dans la Blockchain)
+      class Block {
+        constructor(index, timestamp, transactions, previousHash = "") {
+          this.index = index;
+          this.timestamp = timestamp;
+          this.transactions = transactions;
+          this.previousHash = previousHash;
+          this.nonce = 0;
+          this.merkleRoot = this.calculateMerkleRoot();
+          this.hash = this.calculateHash();
+        }
+        
+        calculateMerkleRoot() {
+          if (!this.transactions || this.transactions.length === 0) {
+            return "0000000000000000000000000000000000000000000000000000000000000000";
+          }
+          
+          // Créer un tableau de hashes à partir des transactions
+          let hashes = this.transactions.map(tx => {
+            return CryptoJS.SHA256(JSON.stringify({
+              from: tx.from,
+              to: tx.to,
+              amount: tx.amount,
+              fee: tx.fee || "0",
+              signature: tx.signature || ""
+            })).toString();
+          });
+          
+          // Construire l'arbre de Merkle jusqu'à obtenir un seul hash racine
+          while (hashes.length > 1) {
+            const tempHashes = [];
+            for (let i = 0; i < hashes.length; i += 2) {
+              if (i + 1 < hashes.length) {
+                tempHashes.push(CryptoJS.SHA256(hashes[i] + hashes[i + 1]).toString());
+              } else {
+                tempHashes.push(CryptoJS.SHA256(hashes[i] + hashes[i]).toString());
+              }
+            }
+            hashes = tempHashes;
+          }
+          
+          return hashes[0];
+        }
+        
+        calculateHash() {
+          return CryptoJS.SHA256(
+            this.index +
+            this.previousHash +
+            this.timestamp +
+            this.merkleRoot +
+            this.nonce
+          ).toString();
+        }
+      }
+
+      // Fonction de calcul du Merkle Root
+      function computeMerkleRoot(transactions) {
+        if (!transactions || transactions.length === 0) {
+          return "0000000000000000000000000000000000000000000000000000000000000000";
+        }
+        
+        let hashes = transactions.map(tx => 
+          CryptoJS.SHA256(JSON.stringify({
+            from: tx.from,
+            to: tx.to,
+            amount: tx.amount,
+            fee: tx.fee || "0",
+            signature: tx.signature || ""
+          })).toString()
+        );
+        
+        while (hashes.length > 1) {
+          const tempHashes = [];
+          for (let i = 0; i < hashes.length; i += 2) {
+            if (i + 1 < hashes.length) {
+              tempHashes.push(CryptoJS.SHA256(hashes[i] + hashes[i + 1]).toString());
+            } else {
+              tempHashes.push(CryptoJS.SHA256(hashes[i] + hashes[i]).toString());
+            }
+          }
+          hashes = tempHashes;
+        }
+        
+        return hashes[0];
+      }
+
+      // Modification de la classe Blockchain pour sauvegarder dans localStorage
+      class Blockchain {
+        constructor() {
+          this.chain = [this.createGenesisBlock()];
+          this.difficulty = 3; // difficulté initiale
+          
+          // Charger la blockchain depuis localStorage si elle existe
+          this.loadFromLocalStorage();
+        }
+        
+        createGenesisBlock() {
+          return new Block(0, new Date().toISOString(), [], "0");
+        }
+        
+        getLatestBlock() {
+          return this.chain[this.chain.length - 1];
+        }
+        
+        addBlock(newBlock) {
+          newBlock.previousHash = this.getLatestBlock().hash;
+          newBlock.mineBlock(this.difficulty);
+          this.chain.push(newBlock);
+          
+          // Sauvegarder dans localStorage après chaque ajout
+          this.saveToLocalStorage();
+          
+          // Ajustement de difficulté tous les "adjustmentInterval" blocs
+          if (
+            this.chain.length % adjustmentInterval === 0 &&
+            this.chain.length > adjustmentInterval
+          ) {
+            this.adjustDifficulty();
+          }
+        }
+        
+        // Nouvelle méthode pour sauvegarder dans localStorage
+        saveToLocalStorage() {
+          try {
+            localStorage.setItem('blockchain', JSON.stringify(this.chain));
+            localStorage.setItem('blockchainDifficulty', this.difficulty.toString());
+            console.log('Blockchain sauvegardée dans localStorage');
+          } catch (error) {
+            console.error('Erreur lors de la sauvegarde de la blockchain:', error);
+          }
+        }
+        
+        // Nouvelle méthode pour charger depuis localStorage
+        loadFromLocalStorage() {
+          try {
+            const savedChain = localStorage.getItem('blockchain');
+            const savedDifficulty = localStorage.getItem('blockchainDifficulty');
+            
+            if (savedChain) {
+              this.chain = JSON.parse(savedChain);
+              console.log(`Blockchain chargée depuis localStorage: ${this.chain.length} blocs`);
+            }
+            
+            if (savedDifficulty) {
+              this.difficulty = parseInt(savedDifficulty);
+              console.log(`Difficulté chargée: ${this.difficulty}`);
+            }
+          } catch (error) {
+            console.error('Erreur lors du chargement de la blockchain:', error);
+          }
+        }
+        
+        adjustDifficulty() {
+          const latestBlock = this.getLatestBlock();
+          const prevAdjustmentBlock =
+            this.chain[this.chain.length - adjustmentInterval];
+          const actualTime =
+            (new Date(latestBlock.timestamp) -
+              new Date(prevAdjustmentBlock.timestamp)) /
+            1000;
+          const expectedTime = adjustmentInterval * targetBlockTime;
+          if (actualTime < expectedTime / 2) {
+            this.difficulty++;
+            console.log("Difficulty increased to " + this.difficulty);
+          } else if (actualTime > expectedTime * 2) {
+            if (this.difficulty > 1) {
+              this.difficulty--;
+              console.log("Difficulty decreased to " + this.difficulty);
+            }
+          } else {
+            console.log("Difficulty remains at " + this.difficulty);
+          }
+          document.getElementById("currentDifficulty").innerText =
+            this.difficulty;
+        }
+      }
+
+      const myBlockchain = new Blockchain();
+
+      // Constante pour frais fixe
+      const fixedFee = "2";
+
+      // Structure pour stocker les wallets et leurs clés
+      let availableWallets = [];
+      let selectedWalletKeyPair = null;
+      
+      // Charger les wallets au démarrage
+      document.addEventListener("DOMContentLoaded", function() {
+        // Améliorer l'ordre de chargement des données
+        initSocketConnection(); // D'abord initialiser la connexion Socket.io
+        
+        // Charger le mempool après un court délai pour permettre la connexion Socket.io
+        setTimeout(() => {
+          loadMempoolFromStorage(); // Charger le mempool depuis localStorage et le synchroniser
+          loadWallets(); // Puis charger les wallets
+          updateMempoolDisplay(); // Mettre à jour l'affichage du mempool
+          updateBlockchainDisplay(); // Mettre à jour l'affichage de la blockchain
+        }, 500);
+      });
+      
+      // Fonction pour charger les wallets depuis localStorage
+      function loadWallets() {
+        const storedWallets = JSON.parse(localStorage.getItem('blockchainWallets')) || [];
+        availableWallets = storedWallets;
+        
+        // Remplir le sélecteur de wallets
+        const walletSelector = document.getElementById('walletSelector');
+        walletSelector.innerHTML = '<option value="">-- Choisir un wallet --</option>';
+        
+        availableWallets.forEach((wallet, index) => {
+          // Afficher uniquement le pseudo du wallet
+          const option = document.createElement('option');
+          option.value = index;
+          option.textContent = wallet.username;
+          walletSelector.appendChild(option);
+        });
+        
+        // Écouter les changements du sélecteur
+        walletSelector.addEventListener('change', handleWalletSelection);
+      }
+      
+      // Fonction pour gérer la sélection d'un wallet
+      function handleWalletSelection() {
+        const walletSelector = document.getElementById('walletSelector');
+        const selectedIndex = walletSelector.value;
+        
+        if (selectedIndex === "") {
+          selectedWalletKeyPair = null;
+          return;
+        }
+        
+        const selectedWallet = availableWallets[selectedIndex];
+        
+        try {
+          // Recréer la paire de clés à partir de la clé privée stockée
+          const privateKey = selectedWallet.privateKey;
+          selectedWalletKeyPair = ec.keyFromPrivate(privateKey);
+          
+          console.log(`Wallet sélectionné: ${selectedWallet.username}`);
+        } catch (error) {
+          console.error("Erreur lors du chargement de la clé:", error);
+          alert("Erreur lors du chargement du wallet.");
+          selectedWalletKeyPair = null;
+        }
+      }
+      
+      // Mise à jour de la fonction createTransaction pour vérifier le solde
+      // Modifier la fonction createTransaction pour ne pas transférer immédiatement l'argent au destinataire
+      function createTransaction() {
+        // Vérifier si un wallet a été sélectionné
+        if (!selectedWalletKeyPair) {
+          alert("Veuillez sélectionner un wallet pour effectuer la transaction.");
+          return;
+        }
+        
+        const from = selectedWalletKeyPair.getPublic('hex');
+        const to = document.getElementById("txTo").value.trim();
+        const amount = parseFloat(document.getElementById("txAmount").value.trim());
+        
+        if (!to || isNaN(amount) || amount <= 0) {
+          alert("Veuillez saisir un destinataire valide et un montant positif.");
+          return;
+        }
+        
+        // Vérifier si le wallet a un solde suffisant
+        const selectedWalletIndex = document.getElementById('walletSelector').value;
+        const selectedWallet = availableWallets[selectedWalletIndex];
+        
+        console.log("Vérification du solde pour la transaction:");
+        const currentBalance = parseFloat(selectedWallet.balance);
+        
+        // Le montant total inclut le montant de la transaction + les frais
+        const totalCost = amount + parseFloat(fixedFee);
+        
+        console.log(`Montant transaction: ${amount}€, Frais: ${fixedFee}€, Total: ${totalCost}€`);
+        console.log(`Solde disponible: ${currentBalance}€`);
+        
+        if (currentBalance < totalCost) {
+          alert(`Solde insuffisant! Votre solde actuel est de ${currentBalance}€, mais la transaction nécessite ${totalCost}€ (${amount}€ + ${fixedFee}€ de frais).`);
+          return;
+        }
+        
+        // On ajoute le fee fixe dans l'objet transaction
+        const tx = { from, to, amount: amount.toString(), fee: fixedFee };
+        const txData = JSON.stringify(tx);
+        
+        // Signer avec la clé du wallet sélectionné
+        const signature = selectedWalletKeyPair.sign(txData);
+        tx.signature = signature.toDER("hex");
+        
+        document.getElementById("txSignature").value = tx.signature;
+        
+        if (!verifyTransaction(tx)) {
+          alert("La transaction n'a pas pu être vérifiée.");
+          return;
+        }
+        
+        // MODIFICATION : Ajouter un champ pending à la transaction
+        tx.pending = true; // Marquer la transaction comme en attente
+        
+        // Ajouter la transaction au mempool
+        mempool.push(tx);
+        updateMempoolDisplay();
+        saveMempoolToStorage(); // Sauvegarder le mempool mis à jour
+        
+        // Au lieu d'utiliser socket.emit directement, utiliser une fonction robuste
+        if (!emitTransaction(tx)) {
+          // Si l'émission a échoué, sauvegarder quand même localement
+          console.log("L'émission de la transaction via Socket.io a échoué, sauvegarde locale uniquement");
+        }
+        
+        // Réinitialiser les champs
+        document.getElementById("txTo").value = "";
+        document.getElementById("txAmount").value = "";
+        
+        // MODIFICATION : Déduire le montant du wallet de l'expéditeur mais NE PAS l'ajouter au destinataire
+        selectedWallet.balance = (currentBalance - totalCost).toFixed(2);
+        
+        // AJOUT : Stocker cette transaction "en attente" dans un champ spécial
+        if (!selectedWallet.pendingOutgoing) {
+          selectedWallet.pendingOutgoing = [];
+        }
+        selectedWallet.pendingOutgoing.push({
+          txId: tx.signature.substring(0, 10),
+          to: tx.to,
+          amount: amount,
+          fee: parseFloat(fixedFee),
+          timestamp: new Date().toISOString()
+        });
+        
+        // Sauvegarder les modifications du wallet
+        localStorage.setItem('blockchainWallets', JSON.stringify(availableWallets));
+        
+        // Mettre à jour l'affichage
+        loadWallets();
+        
+        // Indiquer à l'utilisateur que la transaction est en attente de minage
+        alert(`Transaction ajoutée au mempool! Elle sera confirmée après minage. \n\nMontant : ${amount}€ \nFrais : ${fixedFee}€ \nTotal : ${totalCost}€`);
+      }
+
+      // Vérification de la signature (incluant le fee)
+      function verifyTransaction(tx) {
+        try {
+          const key = ec.keyFromPublic(tx.from, "hex");
+          const txData = JSON.stringify({
+            from: tx.from,
+            to: tx.to,
+            amount: tx.amount,
+            fee: tx.fee,
+          });
+          return key.verify(txData, tx.signature);
+        } catch (e) {
+          return false;
+        }
+      }
+
+      // Mise à jour de l'affichage du mempool
+      function updateMempoolDisplay() {
+        const display = document.getElementById("mempoolDisplay");
+        display.textContent =
+          mempool.length === 0
+            ? "Aucune transaction"
+            : JSON.stringify(mempool, null, 2);
+      }
+
+      // Fonction pour miner un bloc avec mise à jour des soldes
+      function mineBlock() {
+        if (mempool.length === 0) {
+          // Si le mempool est vide, possibilité de miner quand même pour la récompense
+          if (!confirm("Le mempool est vide. Voulez-vous tout de même miner un bloc pour obtenir la récompense?")) {
+            return;
+          }
+        }
+        
+        // Déterminer qui sera le bénéficiaire de la récompense (le mineur)
+        let minerPublicKey;
+        let minerName = "Système";
+        
+        // Si un wallet est sélectionné, il sera le bénéficiaire
+        if (selectedWalletKeyPair) {
+          minerPublicKey = selectedWalletKeyPair.getPublic('hex');
+          const selectedWalletIndex = document.getElementById('walletSelector').value;
+          if (selectedWalletIndex !== "") {
+            const selectedWallet = availableWallets[selectedWalletIndex];
+            minerName = selectedWallet.username;
+          }
+        } else {
+          // Si aucun wallet n'est sélectionné, demander à l'utilisateur d'en choisir un
+          alert("Veuillez sélectionner un wallet pour recevoir la récompense de minage.");
+          return;
+        }
+        
+        const index = myBlockchain.chain.length;
+        const timestamp = new Date().toISOString();
+        const transactions = mempool.slice();
+        
+        // Calculer les frais totaux de toutes les transactions du bloc
+        let totalFees = 0;
+        transactions.forEach(tx => {
+          totalFees += parseFloat(tx.fee || 0);
+        });
+        
+        // Créer la transaction coinbase (récompense du mineur)
+        const coinbaseReward = BLOCK_REWARD + totalFees;
+        const coinbaseTx = {
+          from: "COINBASE", // La transaction de récompense n'a pas d'expéditeur réel
+          to: minerPublicKey,
+          amount: coinbaseReward.toString(),
+          fee: "0", // Pas de frais pour la transaction coinbase
+          coinbase: true // Marquer cette transaction comme coinbase
+        };
+        
+        // Ajouter la transaction coinbase en première position
+        transactions.unshift(coinbaseTx);
+        
+        // Créer et miner le bloc
+        const newBlock = new Block(index, timestamp, transactions);
+        
+        console.log(`Début du minage du bloc ${index}...`);
+        const startTime = Date.now();
+        
+        myBlockchain.addBlock(newBlock);
+        
+        const endTime = Date.now();
+        const miningTime = (endTime - startTime) / 1000;
+        console.log(`Bloc miné en ${miningTime} secondes avec difficulté ${myBlockchain.difficulty}`);
+        
+        // Mettre à jour les soldes des wallets après le minage
+        updateAllWalletBalances();
+        
+        // Au lieu d'utiliser socket.emit directement, utiliser une fonction robuste
+        if (!emitBlock(newBlock)) {
+          console.log("L'émission du bloc via Socket.io a échoué, sauvegarde locale uniquement");
+        }
+        
+        mempool = [];
+        updateMempoolDisplay();
+        saveMempoolToStorage();
+        updateBlockchainDisplay();
+        
+        // Afficher un message de succès et appeler debugBlockchain
+        alert(`Bloc miné avec succès! ${minerName} a reçu une récompense de ${coinbaseReward}€ (${BLOCK_REWARD}€ de récompense + ${totalFees}€ de frais). Les soldes des wallets ont été mis à jour.`);
+        
+        // Appeler la fonction de debug pour analyser la blockchain après le minage
+        debugBlockchain();
+        
+        // Mettre à jour le wallet du mineur directement dans availableWallets
+        if (selectedWalletKeyPair) {
+          const selectedWalletIndex = document.getElementById('walletSelector').value;
+          if (selectedWalletIndex !== "") {
+            const selectedWallet = availableWallets[selectedWalletIndex];
+            const coinbaseReward = BLOCK_REWARD + totalFees;
+            
+            // Mettre à jour le solde avec la récompense
+            selectedWallet.balance = (parseFloat(selectedWallet.balance) + coinbaseReward).toFixed(2);
+            
+            // Sauvegarder dans localStorage
+            localStorage.setItem('blockchainWallets', JSON.stringify(availableWallets));
+            
+            // Recharger les wallets pour mettre à jour l'affichage
+            loadWallets();
+          }
+        }
+        
+        // Sauvegarder explicitement la blockchain dans localStorage
+        myBlockchain.saveToLocalStorage();
+      }
+
+      // Fonction complètement réécrite pour obtenir le solde d'un wallet
+      function getWalletBalance(publicKey) {
+        // IMPORTANT: Vérifier d'abord le solde stocké dans localStorage
+        const storedWallets = JSON.parse(localStorage.getItem('blockchainWallets')) || [];
+        const storedWallet = storedWallets.find(wallet => wallet.publicKey === publicKey);
+        
+        // Si un portefeuille avec ce solde existe déjà dans localStorage, utiliser cette valeur
+        if (storedWallet) {
+          console.log(`Utilisation du solde stocké pour ${publicKey.substring(0, 10)}... : ${storedWallet.balance}€`);
+          return parseFloat(storedWallet.balance);
+        }
+        
+        // Si le portefeuille n'est pas trouvé dans localStorage, calculer le solde à partir de la blockchain
+        console.log(`Calcul du solde depuis la blockchain pour ${publicKey.substring(0, 10)}...`);
+        let balance = 0;
+        
+        // Code existant pour parcourir la blockchain...
+        for (let i = 0; i < myBlockchain.chain.length; i++) {
+          const block = myBlockchain.chain[i];
+          
+          if (!block.transactions || block.transactions.length === 0) {
+            continue;
+          }
+          
+          for (let j = 0; j < block.transactions.length; j++) {
+            const tx = block.transactions[j];
+            
+            // Récompense de minage
+            if (tx.from === 'COINBASE' && tx.to === publicKey) {
+              balance += parseFloat(tx.amount);
+            }
+            // Transactions entrantes
+            else if (tx.to === publicKey && tx.from !== 'COINBASE') {
+              balance += parseFloat(tx.amount);
+            }
+            // Transactions sortantes
+            else if (tx.from === publicKey) {
+              balance -= parseFloat(tx.amount);
+              balance -= parseFloat(tx.fee || 0);
+            }
+          }
+        }
+        
+        return balance;
+      }
+
+      // Fonction pour mettre à jour les soldes de tous les wallets après un minage
+      function updateAllWalletBalances() {
+        // Au lieu de recalculer tous les soldes, mettre à jour uniquement ceux qui ont changé
+        // après une transaction ou un minage
+        const storedWallets = JSON.parse(localStorage.getItem('blockchainWallets')) || [];
+        
+        // Lors d'un minage, la mise à jour du solde est déjà faite par le mineur
+        // Lors d'une transaction, on ne met à jour que les wallets concernés
+        
+        // Réafficher les soldes actuels
+        loadWallets();
+      }
+      
+      // Synchronisation via Socket.io
+      socket.on("transactionBroadcast", (tx) => {
+        console.log("Nouvelle transaction diffusée", tx);
+        if (!mempool.some((localTx) => localTx.signature === tx.signature)) {
+          mempool.push(tx);
+          updateMempoolDisplay();
+          saveMempoolToStorage();
+        }
+      });
+
+      // Mettre à jour le gestionnaire d'événements pour les blocs diffusés
+      socket.on("blockBroadcast", (block) => {
+        console.log("Nouveau bloc diffusé", block);
+        if (!myBlockchain.chain.some((b) => b.hash === block.hash)) {
+          myBlockchain.chain.push(block);
+          
+          // Mettre à jour les soldes des wallets après réception d'un nouveau bloc
+          updateAllWalletBalances();
+        }
+        
+        block.transactions.forEach((txInBlock) => {
+          mempool = mempool.filter(
+            (localTx) => localTx.signature !== txInBlock.signature
+          );
+        });
+        
+        updateBlockchainDisplay();
+        updateMempoolDisplay();
+        saveMempoolToStorage();
+      });
+
+      // Constante pour la récompense de bloc
+      const BLOCK_REWARD = 50; // Récompense fixe par bloc
+
+      // Affichage amélioré pour la blockchain montrant clairement les transactions coinbase
+      function updateBlockchainDisplay() {
+        const display = document.getElementById("blockchainDisplay");
+        
+        // Check if the element exists before trying to update it
+        if (!display) {
+          console.log("Element 'blockchainDisplay' not found. This is normal on the transaction page.");
+          return; // Exit the function if element doesn't exist
+        }
+        
+        // Only proceed if the display element exists
+        // Créer une copie formatée pour affichage
+        const formattedChain = myBlockchain.chain.map(block => {
+          // Formater chaque bloc pour mettre en évidence les transactions coinbase
+          const formattedBlock = {
+            index: block.index,
+            timestamp: block.timestamp,
+            previousHash: block.previousHash,
+            hash: block.hash,
+            nonce: block.nonce,
+            merkleRoot: block.merkleRoot,
+            transactions: block.transactions.map(tx => {
+              if (tx.coinbase) {
+                return {
+                  type: "RÉCOMPENSE DE MINAGE",
+                  mineur: tx.to,
+                  montant: tx.amount,
+                  coinbase: true
+                };
+              } else {
+                return {
+                  from: tx.from,
+                  to: tx.to,
+                  amount: tx.amount,
+                  fee: tx.fee,
+                  signature: tx.signature ? tx.signature.substring(0, 15) + "..." : ""
+                };
+              }
+            })
+          };
+          return formattedBlock;
+        });
+        
+        display.textContent = JSON.stringify(formattedChain, null, 2);
+      }
+
+      // Ajoutons un bouton de debug pour vérifier les soldes
+      document.addEventListener("DOMContentLoaded", function() {
+        // Ajouter un bouton de debug après le sélecteur de wallet
+        const walletSelector = document.getElementById('walletSelector').parentNode;
+        const debugButton = document.createElement('button');
+      });
+
+      // On va aussi forcer une mise à jour de tous les wallets au démarrage
+      document.addEventListener("DOMContentLoaded", function() {
+        // Code existant pour charger les wallets
+        loadWallets();
+        
+        // Recalculer explicitement les soldes au chargement de la page
+        console.log("Mise à jour forcée des soldes au démarrage...");
+        updateAllWalletBalances();
+        
+        // Puis recharger les wallets avec les nouveaux soldes
+        loadWallets();
+      });
+
+      // Ajouter une fonction pour déboguer la blockchain
+      function debugBlockchain() {
+        console.log("État actuel de la blockchain:");
+        console.log(`- Nombre de blocs: ${myBlockchain.chain.length}`);
+        console.log(`- Difficulté actuelle: ${myBlockchain.difficulty}`);
+        
+        // Vérifier que la blockchain est bien sauvegardée
+        try {
+          const savedChain = localStorage.getItem('blockchain');
+          if (savedChain) {
+            const parsedChain = JSON.parse(savedChain);
+            console.log(`- Blocs dans localStorage: ${parsedChain.length}`);
+          } else {
+            console.log("- Aucune blockchain dans localStorage");
+          }
+        } catch (error) {
+          console.error("Erreur lors de la vérification de localStorage:", error);
+        }
+      }
+
+      // Appeler la fonction de debug blockchain après chaque minage
+      function mineBlock() {
+        // Code de minage existant...
+        
+        // Après le minage réussi et la mise à jour des interfaces, appeler debugBlockchain
+        const oldCode = alert;
+        alert = function(message) {
+          oldCode(message);
+          debugBlockchain();
+        };
+      }
+
+      // Ajouter cette fonction pour charger le mempool à partir de localStorage
+      function loadMempoolFromStorage() {
+        try {
+          const storedMempool = localStorage.getItem('blockchainMempool');
+          if (storedMempool) {
+            mempool = JSON.parse(storedMempool);
+            console.log(`Mempool chargé depuis localStorage: ${mempool.length} transactions`);
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement du mempool:", error);
+          mempool = [];
+        }
+      }
+
+      // Ajouter cette fonction pour sauvegarder le mempool dans localStorage
+      function saveMempoolToStorage() {
+        try {
+          localStorage.setItem('blockchainMempool', JSON.stringify(mempool));
+          console.log(`Mempool sauvegardé dans localStorage: ${mempool.length} transactions`);
+        } catch (error) {
+          console.error("Erreur lors de la sauvegarde du mempool:", error);
+        }
+      }
+
+      // Amélioration de la connexion à socket.io avec feedback
+      let socketConnected = false;
+
+      document.addEventListener("DOMContentLoaded", function() {
+        // Initialiser la connexion Socket.io
+        initSocketConnection();
+        
+        // ...existing code...
+      });
+
+      // Fonction pour initialiser et gérer la connexion Socket.io
+      function initSocketConnection() {
+        console.log("Initialisation de la connexion Socket.io...");
+        
+        try {
+          socket = io({
+            reconnectionAttempts: 5,
+            timeout: 10000,
+            reconnectionDelay: 1000
+          });
+          
+          // Gestionnaire de connexion réussie
+          socket.on('connect', () => {
+            console.log(`Connecté au serveur Socket.IO (ID: ${socket.id})`);
+            socketConnected = true;
+            
+            // Ajouter un indicateur visuel de connexion
+            showConnectionStatus(true);
+          });
+          
+          // Gestionnaire de déconnexion
+          socket.on('disconnect', (reason) => {
+            console.log(`Déconnecté du serveur Socket.IO (Raison: ${reason})`);
+            socketConnected = false;
+            showConnectionStatus(false);
+          });
+          
+          // Gestionnaire de tentative de reconnexion
+          socket.on('reconnecting', (attemptNumber) => {
+            console.log(`Tentative de reconnexion #${attemptNumber}...`);
+            showConnectionStatus(false, true);
+          });
+          
+          // Gestionnaire d'échec de reconnexion
+          socket.on('reconnect_failed', () => {
+            console.error("Échec des tentatives de reconnexion");
+            showConnectionStatus(false, false);
+            alert("La connexion au serveur a été perdue. Les transactions ne peuvent pas être diffusées. Veuillez rafraîchir la page.");
+          });
+          
+          // Écouter les événements de blockchain
+          socket.on('transactionBroadcast', (tx) => {
+            if (!mempool.some((localTx) => localTx.signature === tx.signature)) {
+              console.log("Transaction reçue d'un autre client:", tx);
+              mempool.push(tx);
+              updateMempoolDisplay();
+              saveMempoolToStorage();
+            }
+          });
+          
+          socket.on('blockBroadcast', (block) => {
+            console.log("Nouveau bloc reçu:", block);
+            processReceivedBlock(block);
+          });
+        } catch (e) {
+          console.error("Erreur lors de l'initialisation de Socket.io:", e);
+        }
+      }
+
+      // Fonction pour afficher l'état de la connexion
+      function showConnectionStatus(connected, reconnecting = false) {
+        // Trouver ou créer l'indicateur de connexion
+        let statusIndicator = document.getElementById('connection-status');
+        if (!statusIndicator) {
+          statusIndicator = document.createElement('div');
+          statusIndicator.id = 'connection-status';
+          statusIndicator.style.position = 'fixed';
+          statusIndicator.style.top = '60px';
+          statusIndicator.style.right = '20px';
+          statusIndicator.style.padding = '5px 10px';
+          statusIndicator.style.borderRadius = '5px';
+          statusIndicator.style.fontWeight = 'bold';
+          statusIndicator.style.fontSize = '12px';
+          statusIndicator.style.zIndex = '1000';
+          document.body.appendChild(statusIndicator);
+        }
+        
+        if (connected) {
+          statusIndicator.textContent = 'Serveur: Connecté';
+          statusIndicator.style.background = '#c6f6d5'; // Vert clair
+          statusIndicator.style.color = '#22543d'; // Vert foncé
+          
+          // Masquer après 3 secondes
+          setTimeout(() => {
+            statusIndicator.style.opacity = '0';
+            setTimeout(() => {
+              if (statusIndicator.parentNode) {
+                statusIndicator.parentNode.removeChild(statusIndicator);
+              }
+            }, 500);
+          }, 3000);
+        } else if (reconnecting) {
+          statusIndicator.textContent = 'Serveur: Reconnexion...';
+          statusIndicator.style.background = '#feebc8'; // Jaune clair
+          statusIndicator.style.color = '#7b341e'; // Orange foncé
+          statusIndicator.style.opacity = '1';
+        } else {
+          statusIndicator.textContent = 'Serveur: Déconnecté';
+          statusIndicator.style.background = '#fed7d7'; // Rouge clair
+          statusIndicator.style.color = '#822727'; // Rouge foncé
+          statusIndicator.style.opacity = '1';
+        }
+      }
+
+      // Fonction améliorée pour traiter un bloc reçu
+      function processReceivedBlock(block) {
+        try {
+          // Vérifier si le bloc existe déjà dans notre chaîne
+          if (myBlockchain.chain.some((b) => b.hash === block.hash)) {
+            console.log(`Le bloc ${block.hash.substring(0, 8)}... existe déjà dans notre chaîne.`);
+            return;
+          }
+          
+          // Ajouter le bloc à notre chaîne locale
+          myBlockchain.chain.push(block);
+          console.log(`Bloc #${block.index} ajouté à la chaîne locale.`);
+          
+          // Sauvegarder la chaîne mise à jour
+          myBlockchain.saveToLocalStorage();
+          
+          // Nettoyer le mempool des transactions incluses dans le bloc
+          if (block.transactions && block.transactions.length > 0) {
+            const txCount = cleanMempool(block.transactions);
+            console.log(`${txCount} transaction(s) retirée(s) du mempool`);
+          }
+          
+          // Mettre à jour l'affichage
+          updateMempoolDisplay();
+          updateAllWalletBalances();
+          
+          // Notification à l'utilisateur
+          alert(`Un nouveau bloc (#${block.index}) a été reçu et ajouté à la blockchain!`);
+        } catch (error) {
+          console.error("Erreur lors du traitement du bloc reçu:", error);
+        }
+      }
+
+      // Fonction pour nettoyer le mempool après réception d'un bloc
+      function cleanMempool(blockTransactions) {
+        const initialSize = mempool.length;
+        
+        // Filtrer les transactions qui sont dans le bloc
+        mempool = mempool.filter(mempoolTx => {
+          return !blockTransactions.some(blockTx => 
+            blockTx.signature === mempoolTx.signature
+          );
+        });
+        
+        // Sauvegarder le mempool mis à jour
+        saveMempoolToStorage();
+        
+        return initialSize - mempool.length;
+      }
+
+      // Fonction améliorée pour émettre une transaction
+      function createTransaction() {
+        // Vérifier si un wallet a été sélectionné
+        if (!selectedWalletKeyPair) {
+          alert("Veuillez sélectionner un wallet pour effectuer la transaction.");
+          return;
+        }
+        
+        const from = selectedWalletKeyPair.getPublic('hex');
+        const to = document.getElementById("txTo").value.trim();
+        const amount = parseFloat(document.getElementById("txAmount").value.trim());
+        
+        if (!to || isNaN(amount) || amount <= 0) {
+          alert("Veuillez saisir un destinataire valide et un montant positif.");
+          return;
+        }
+        
+        // Vérifier si le wallet a un solde suffisant
+        const selectedWalletIndex = document.getElementById('walletSelector').value;
+        const selectedWallet = availableWallets[selectedWalletIndex];
+        
+        console.log("Vérification du solde pour la transaction:");
+        const currentBalance = parseFloat(selectedWallet.balance);
+        
+        // Le montant total inclut le montant de la transaction + les frais
+        const totalCost = amount + parseFloat(fixedFee);
+        
+        console.log(`Montant transaction: ${amount}€, Frais: ${fixedFee}€, Total: ${totalCost}€`);
+        console.log(`Solde disponible: ${currentBalance}€`);
+        
+        if (currentBalance < totalCost) {
+          alert(`Solde insuffisant! Votre solde actuel est de ${currentBalance}€, mais la transaction nécessite ${totalCost}€ (${amount}€ + ${fixedFee}€ de frais).`);
+          return;
+        }
+        
+        // On ajoute le fee fixe dans l'objet transaction
+        const tx = { from, to, amount: amount.toString(), fee: fixedFee };
+        const txData = JSON.stringify(tx);
+        
+        // Signer avec la clé du wallet sélectionné
+        const signature = selectedWalletKeyPair.sign(txData);
+        tx.signature = signature.toDER("hex");
+        
+        document.getElementById("txSignature").value = tx.signature;
+        
+        if (!verifyTransaction(tx)) {
+          alert("La transaction n'a pas pu être vérifiée.");
+          return;
+        }
+        
+        // MODIFICATION : Ajouter un champ pending à la transaction
+        tx.pending = true; // Marquer la transaction comme en attente
+        
+        // Ajouter la transaction au mempool
+        mempool.push(tx);
+        updateMempoolDisplay();
+        saveMempoolToStorage(); // Sauvegarder le mempool mis à jour
+        
+        // Au lieu d'utiliser socket.emit directement, utiliser une fonction robuste
+        if (!emitTransaction(tx)) {
+          // Si l'émission a échoué, sauvegarder quand même localement
+          console.log("L'émission de la transaction via Socket.io a échoué, sauvegarde locale uniquement");
+        }
+        
+        // Réinitialiser les champs
+        document.getElementById("txTo").value = "";
+        document.getElementById("txAmount").value = "";
+        
+        // MODIFICATION : Déduire le montant du wallet de l'expéditeur mais NE PAS l'ajouter au destinataire
+        selectedWallet.balance = (currentBalance - totalCost).toFixed(2);
+        
+        // AJOUT : Stocker cette transaction "en attente" dans un champ spécial
+        if (!selectedWallet.pendingOutgoing) {
+          selectedWallet.pendingOutgoing = [];
+        }
+        selectedWallet.pendingOutgoing.push({
+          txId: tx.signature.substring(0, 10),
+          to: tx.to,
+          amount: amount,
+          fee: parseFloat(fixedFee),
+          timestamp: new Date().toISOString()
+        });
+        
+        // Sauvegarder les modifications du wallet
+        localStorage.setItem('blockchainWallets', JSON.stringify(availableWallets));
+        
+        // Mettre à jour l'affichage
+        loadWallets();
+        
+        // Indiquer à l'utilisateur que la transaction est en attente de minage
+        alert(`Transaction ajoutée au mempool! Elle sera confirmée après minage. \n\nMontant : ${amount}€ \nFrais : ${fixedFee}€ \nTotal : ${totalCost}€`);
+      }
+
+      // Fonction pour émettre une transaction via Socket.io avec gestion d'erreurs
+      function emitTransaction(tx) {
+        try {
+          if (!socket || !socketConnected) {
+            console.error("Socket.io n'est pas connecté, impossible d'émettre la transaction");
+            return false;
+          }
+          
+          socket.emit("newTransaction", tx, (acknowledgement) => {
+            if (acknowledgement && acknowledgement.success) {
+              console.log("Transaction émise avec succès et confirmée par le serveur");
+            }
+          });
+          
+          return true;
+        } catch (error) {
+          console.error("Erreur lors de l'émission de la transaction:", error);
+          return false;
+        }
+      }
+
+      // Fonction améliorée pour miner un bloc
+      function mineBlock() {
+        if (mempool.length === 0) {
+          // Si le mempool est vide, possibilité de miner quand même pour la récompense
+          if (!confirm("Le mempool est vide. Voulez-vous tout de même miner un bloc pour obtenir la récompense?")) {
+            return;
+          }
+        }
+        
+        // Déterminer qui sera le bénéficiaire de la récompense (le mineur)
+        let minerPublicKey;
+        let minerName = "Système";
+        
+        // Si un wallet est sélectionné, il sera le bénéficiaire
+        if (selectedWalletKeyPair) {
+          minerPublicKey = selectedWalletKeyPair.getPublic('hex');
+          const selectedWalletIndex = document.getElementById('walletSelector').value;
+          if (selectedWalletIndex !== "") {
+            const selectedWallet = availableWallets[selectedWalletIndex];
+            minerName = selectedWallet.username;
+          }
+        } else {
+          // Si aucun wallet n'est sélectionné, demander à l'utilisateur d'en choisir un
+          alert("Veuillez sélectionner un wallet pour recevoir la récompense de minage.");
+          return;
+        }
+        
+        const index = myBlockchain.chain.length;
+        const timestamp = new Date().toISOString();
+        const transactions = mempool.slice();
+        
+        // Calculer les frais totaux de toutes les transactions du bloc
+        let totalFees = 0;
+        transactions.forEach(tx => {
+          totalFees += parseFloat(tx.fee || 0);
+        });
+        
+        // Calculer la récompense en fonction du halving et de la difficulté
+        const baseReward = getBlockReward(index, myBlockchain.difficulty);
+        const coinbaseReward = baseReward + totalFees;
+        
+        // Créer la transaction coinbase (récompense du mineur)
+        const coinbaseTx = {
+          from: "COINBASE", // La transaction de récompense n'a pas d'expéditeur réel
+          to: minerPublicKey,
+          amount: coinbaseReward.toString(),
+          fee: "0", // Pas de frais pour la transaction coinbase
+          coinbase: true // Marquer cette transaction comme coinbase
+        };
+        
+        // Ajouter la transaction coinbase en première position
+        transactions.unshift(coinbaseTx);
+        
+        // Créer et miner le bloc
+        const newBlock = new Block(index, timestamp, transactions);
+        
+        console.log(`Début du minage du bloc ${index}...`);
+        const startTime = Date.now();
+        
+        myBlockchain.addBlock(newBlock);
+        
+        const endTime = Date.now();
+        const miningTime = (endTime - startTime) / 1000;
+        console.log(`Bloc miné en ${miningTime} secondes avec difficulté ${myBlockchain.difficulty}`);
+        
+        // Mettre à jour les soldes des wallets après le minage
+        updateAllWalletBalances();
+        
+        // Au lieu d'utiliser socket.emit directement, utiliser une fonction robuste
+        if (!emitBlock(newBlock)) {
+          console.log("L'émission du bloc via Socket.io a échoué, sauvegarde locale uniquement");
+        }
+        
+        mempool = [];
+        updateMempoolDisplay();
+        saveMempoolToStorage();
+        updateBlockchainDisplay();
+        
+        // Afficher un message de succès et appeler debugBlockchain
+        alert(`Bloc miné avec succès! ${minerName} a reçu une récompense de ${coinbaseReward.toFixed(2)}€ (${baseReward.toFixed(2)}€ de récompense + ${totalFees}€ frais). Les soldes des wallets ont été mis à jour.`);
+        
+        // Appeler la fonction de debug pour analyser la blockchain après le minage
+        debugBlockchain();
+        
+        // Mettre à jour le wallet du mineur directement dans availableWallets
+        if (selectedWalletKeyPair) {
+          const selectedWalletIndex = document.getElementById('walletSelector').value;
+          if (selectedWalletIndex !== "") {
+            const selectedWallet = availableWallets[selectedWalletIndex];
+            const coinbaseReward = BLOCK_REWARD + totalFees;
+            
+            // Mettre à jour le solde avec la récompense
+            selectedWallet.balance = (parseFloat(selectedWallet.balance) + coinbaseReward).toFixed(2);
+            
+            // Sauvegarder dans localStorage
+            localStorage.setItem('blockchainWallets', JSON.stringify(availableWallets));
+            
+            // Recharger les wallets pour mettre à jour l'affichage
+            loadWallets();
+          }
+        }
+        
+        // Sauvegarder explicitement la blockchain dans localStorage
+        myBlockchain.saveToLocalStorage();
+      }
+
+      // Fonction pour émettre un bloc via Socket.io avec gestion d'erreurs
+      function emitBlock(block) {
+        try {
+          if (!socket || !socketConnected) {
+            console.error("Socket.io n'est pas connecté, impossible d'émettre le bloc");
+            return false;
+          }
+          
+          socket.emit("newBlock", block, (acknowledgement) => {
+            if (acknowledgement && acknowledgement.success) {
+              console.log("Bloc émis avec succès et confirmé par le serveur");
+            }
+          });
+          
+          return true;
+        } catch (error) {
+          console.error("Erreur lors de l'émission du bloc:", error);
+          return false;
+        }
+      }
+
+      // Constante pour la récompense de bloc (remplacer par la fonction de calcul)
+      // const BLOCK_REWARD = 50; // Supprimer cette ligne
+      
+      // Configuration du système de récompense
+      const INITIAL_REWARD = 25; // Récompense initiale de 25€ au lieu de 50€
+      const HALVING_INTERVAL = 4; // Nombre de blocs avant un halving (tous les 4 blocs)
+      const DIFFICULTY_BONUS_FACTOR = 0.1; // 10% de bonus par niveau de difficulté au-dessus de 3
+      
+      // Fonction pour calculer la récompense de bloc en fonction du halving et de la difficulté
+      function getBlockReward(blockIndex, difficulty) {
+        // Nombre de halvings qui ont eu lieu
+        const halvings = Math.floor(blockIndex / HALVING_INTERVAL);
+        
+        // Calculer la récompense de base après halvings
+        let baseReward = INITIAL_REWARD / Math.pow(2, halvings);
+        
+        // Si la récompense devient inférieure à 0.1, on la plafonne à 0.1
+        baseReward = Math.max(baseReward, 0.1);
+        
+        // Ajuster en fonction de la difficulté
+        // Un bonus est appliqué pour chaque niveau de difficulté au-dessus de 3
+        const difficultyBonus = difficulty > 3 ? (difficulty - 3) * DIFFICULTY_BONUS_FACTOR * baseReward : 0;
+        
+        // Retourner la récompense totale (base + bonus de difficulté)
+        return baseReward + difficultyBonus;
+      }
+
+      // Fonction pour coller le contenu du presse-papiers dans le champ destinataire
+      document.addEventListener("DOMContentLoaded", function() {
+        const pasteBtn = document.getElementById('pasteBtnToField');
+        const txToField = document.getElementById('txTo');
+        
+        pasteBtn.addEventListener('click', async function() {
+          try {
+            // Méthode principale avec l'API Clipboard
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              const text = await navigator.clipboard.readText();
+              txToField.value = text;
+            } else {
+              // Alerte pour les navigateurs qui ne supportent pas l'API Clipboard
+              alert("Votre navigateur ne permet pas l'accès au presse-papiers. Veuillez coller manuellement.");
+            }
+          } catch (err) {
+            console.error('Erreur lors du collage:', err);
+            alert("Impossible de coller automatiquement. Veuillez utiliser Ctrl+V ou le menu contextuel.");
+          }
+        });
+      });
+
+      // Fonction pour mettre à jour l'indicateur de statut réseau
+      function updateNetworkStatus(status) {
+        const statusEl = document.getElementById('network-status');
+        if (!statusEl) return;
+        
+        // Mettre à jour la classe
+        statusEl.className = `network-status ${status}`;
+        
+        // Mettre à jour le texte
+        const statusText = statusEl.querySelector('.status-text');
+        if (statusText) {
+          switch (status) {
+            case 'online':
+              statusText.textContent = 'En ligne';
+              break;
+            case 'reconnecting':
+              statusText.textContent = `Reconnexion... (${reconnectAttempts}/${maxReconnectAttempts})`;
+              break;
+            case 'offline':
+              statusText.textContent = 'Hors ligne';
+              break;
+            default:
+              statusText.textContent = 'Statut inconnu';
+          }
+        }
+      }
+
+      // Fonction améliorée pour fusionner les transactions du mempool local avec celles reçues du serveur
+      function mergeMempool(serverMempool) {
+        if (!serverMempool || !Array.isArray(serverMempool)) return;
+
+        // Pour chaque transaction du serveur
+        serverMempool.forEach(serverTx => {
+          // Vérifier si elle existe déjà dans notre mempool local
+          const exists = mempool.some(localTx => 
+            localTx.signature === serverTx.signature || 
+            (localTx.from === serverTx.from && 
+             localTx.to === serverTx.to && 
+             localTx.amount === serverTx.amount && 
+             localTx.timestamp === serverTx.timestamp)
+          );
+          
+          // Si elle n'existe pas, l'ajouter
+          if (!exists) {
+            console.log("Nouvelle transaction ajoutée depuis le serveur:", serverTx);
+            mempool.push(serverTx);
+          }
+        });
+        
+        // Mettre à jour l'affichage et sauvegarder
+        updateMempoolDisplay();
+        saveMempoolToStorage();
+      }
+
+      // Fonction pour vérifier périodiquement le statut de la connexion
+      function setupAutoConnectCheck() {
+        setInterval(() => {
+          // Si nous ne sommes pas connectés mais que nous ne sommes pas en train de nous reconnecter
+          if (!connected && !reconnecting && reconnectAttempts < maxReconnectAttempts) {
+            console.log("Tentative de reconnexion automatique...");
+            initSocketConnection();
+          }
+          
+          // Si nous sommes connectés, envoyer un heartbeat
+          if (connected) {
+            socket.emit('heartbeat', (response) => {
+              const latency = new Date() - new Date(response.serverTime);
+              console.log(`Connexion au serveur: OK (latence ${latency}ms)`);
+            });
+          }
+        }, 30000); // Toutes les 30 secondes
+      }
+
+      // Appeler la fonction pour configurer la vérification automatique
+      document.addEventListener("DOMContentLoaded", function() {
+        // ...existing code...
+        setupAutoConnectCheck();
+      });
+
+      // Fonction pour afficher une notification de transaction
+      function showTransactionNotification(title, message) {
+        // Créer un élément de notification s'il n'existe pas déjà
+        let notification = document.getElementById('transaction-notification');
+        if (!notification) {
+          notification = document.createElement('div');
+          notification.id = 'transaction-notification';
+          notification.className = 'transaction-notification';
+          
+          notification.innerHTML = `
+            <div class="transaction-notification-title"></div>
+            <div class="transaction-notification-content"></div>
+          `;
+          
+          document.body.appendChild(notification);
+        }
+        
+        // Mettre à jour le contenu
+        notification.querySelector('.transaction-notification-title').textContent = title;
+        notification.querySelector('.transaction-notification-content').textContent = message;
+        
+        // Afficher la notification
+        notification.classList.add('show');
+        
+        // Cacher la notification après 5 secondes
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 5000);
+      }
+
+      // Améliorations pour l'émission de transactions et blocs
+      function emitTransaction(tx) {
+        return new Promise((resolve, reject) => {
+          try {
+            if (!socket || !socketConnected) {
+              console.warn("Socket.io n'est pas connecté, transaction sauvegardée localement uniquement");
+              resolve(false);
+              return;
+            }
+            
+            // Émettre la transaction avec un callback d'accusé de réception
+            socket.emit("newTransaction", tx, (response) => {
+              if (response && response.success) {
+                console.log("Transaction émise avec succès et confirmée par le serveur");
+                showTransactionNotification('Transaction émise', 'Transaction diffusée avec succès au réseau');
+                resolve(true);
+              } else {
+                console.warn("La transaction a été rejetée par le serveur:", response?.reason);
+                showTransactionNotification('Transaction rejetée', response?.reason || 'Raison inconnue');
+                resolve(false);
+              }
+            });
+          } catch (error) {
+            console.error("Erreur lors de l'émission de la transaction:", error);
+            reject(error);
+          }
+        });
+      }
+
+      function emitBlock(block) {
+        return new Promise((resolve, reject) => {
+          try {
+            if (!socket || !socketConnected) {
+              console.warn("Socket.io n'est pas connecté, bloc sauvegardé localement uniquement");
+              resolve(false);
+              return;
+            }
+            
+            // Émettre le bloc avec un callback d'accusé de réception
+            socket.emit("newBlock", block, (response) => {
+              if (response && response.success) {
+                console.log("Bloc émis avec succès et confirmé par le serveur");
+                showTransactionNotification('Bloc émis', 'Bloc diffusé avec succès au réseau');
+                resolve(true);
+              } else {
+                console.warn("Le bloc a été rejeté par le serveur:", response?.reason);
+                showTransactionNotification('Bloc rejeté', response?.reason || 'Raison inconnue');
+                resolve(false);
+              }
+            });
+          } catch (error) {
+            console.error("Erreur lors de l'émission du bloc:", error);
+            reject(error);
+          }
+        });
+      }
+      
+      // Mise à jour de la fonction loadMempoolFromStorage pour inclure la synchronisation avec le serveur
+      function loadMempoolFromStorage() {
+        try {
+          // Charger d'abord depuis localStorage
+          const storedMempool = localStorage.getItem('blockchainMempool');
+          if (storedMempool) {
+            mempool = JSON.parse(storedMempool);
+            console.log(`Mempool chargé depuis localStorage: ${mempool.length} transactions`);
+          }
+          
+          // Puis demander une mise à jour depuis le serveur si on est connecté
+          if (connected && socket) {
+            socket.emit('requestBlockchainState', {}, (state) => {
+              if (state && state.mempool) {
+                console.log(`Mempool reçu du serveur: ${state.mempool.length} transactions`);
+                mergeMempool(state.mempool);
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Erreur lors du chargement du mempool:", error);
+          mempool = [];
+        }
+      }
+
+      // Fonction pour vérifier et mettre à jour automatiquement le mempool
+      setInterval(() => {
+        if (connected && socket) {
+          socket.emit('requestBlockchainState', {}, (state) => {
+            if (state && state.mempool) {
+              mergeMempool(state.mempool);
+            }
+          });
+        }
+      }, 30000); // Toutes les 30 secondes
+
+      // Fonction améliorée pour initialiser et gérer la connexion Socket.io
+      function initSocketConnection() {
+        try {
+          console.log("Initialisation de la connexion Socket.io...");
+          
+          // Création d'une nouvelle connexion avec options optimisées
+          socket = io({
+            reconnectionAttempts: maxReconnectAttempts,
+            reconnectionDelay: 1000,
+            timeout: 10000,
+            transports: ['websocket', 'polling'] // WebSocket prioritaire, polling en fallback
+          });
+          
+          // Gestion des événements de connexion
+          socket.on('connect', () => {
+            console.log(`Connecté au serveur Socket.IO (ID: ${socket.id})`);
+            connected = true;
+            socketConnected = true;
+            reconnectAttempts = 0;
+            updateConnectionStatus('online');
+            
+            // Réinitialiser tous les écouteurs pour éviter les doublons
+            socket.off('transactionBroadcast');
+            socket.off('blockBroadcast');
+            socket.off('fullMempool');
+            
+            // Écouter les transactions diffusées
+            socket.on('transactionBroadcast', (tx) => {
+              console.log("Nouvelle transaction reçue:", tx);
+              // Vérifier si la transaction existe déjà localement
+              const exists = mempool.some(localTx =>
+                localTx.signature === tx.signature ||
+                (localTx.from === tx.from &&
+                 localTx.to === tx.to &&
+                 localTx.amount === tx.amount)
+              );
+              
+              if (!exists) {
+                mempool.push(tx);
+                updateMempoolDisplay();
+                saveMempoolToStorage();
+                showTransactionNotification('Nouvelle transaction', `Transaction de ${tx.amount}€ reçue`);
+              }
+            });
+            
+            // Écouter les blocs diffusés
+            socket.on('blockBroadcast', (block) => {
+              console.log("Nouveau bloc reçu:", block);
+              processReceivedBlock(block);
+            });
+            
+            // Nouveau: recevoir le mempool complet
+            socket.on('fullMempool', (serverMempool) => {
+              console.log("Mempool complet reçu:", serverMempool);
+              if (serverMempool && Array.isArray(serverMempool)) {
+                mergeMempool(serverMempool);
+              }
+            });
+            
+            // Demander le mempool complet au serveur
+            socket.emit('requestFullMempool', { clientId: socket.id }, function(response) {
+              console.log('Mempool complet reçu du serveur:', response?.mempool?.length || 0, 'transactions');
+              if (response && response.mempool && Array.isArray(response.mempool)) {
+                mergeMempool(response.mempool);
+              }
+            });
+            
+            // Partager mon mempool local avec le serveur
+            try {
+              if (mempool && mempool.length > 0) {
+                console.log(`Partage de mon mempool local (${mempool.length} transactions) avec le serveur`);
+                socket.emit('shareMyMempool', mempool);
+              }
+            } catch (error) {
+              console.error('Erreur lors du partage du mempool local:', error);
+            }
+          });
+          
+          // ...existing code...
+        } catch (error) {
+          // ...existing code...
+        }
+      }
+
+      // Fonction améliorée pour fusionner les transactions du mempool
+      function mergeMempool(serverMempool) {
+        if (!serverMempool || !Array.isArray(serverMempool)) return;
+        
+        let newTransactionsAdded = 0;
+        
+        // Pour chaque transaction du serveur
+        serverMempool.forEach(serverTx => {
+          // Vérifier si elle existe déjà dans notre mempool local
+          const exists = mempool.some(localTx => 
+            localTx.signature === serverTx.signature || 
+            (localTx.from === serverTx.from && 
+             localTx.to === serverTx.to && 
+             localTx.amount === serverTx.amount)
+          );
+          
+          // Si elle n'existe pas, l'ajouter
+          if (!exists) {
+            console.log("Nouvelle transaction ajoutée depuis le serveur:", serverTx);
+            mempool.push(serverTx);
+            newTransactionsAdded++;
+          }
+        });
+        
+        if (newTransactionsAdded > 0) {
+          console.log(`${newTransactionsAdded} nouvelles transactions ajoutées depuis le serveur`);
+          // Mettre à jour l'affichage et sauvegarder
+          updateMempoolDisplay();
+          saveMempoolToStorage();
+          showTransactionNotification('Synchronisation', `${newTransactionsAdded} nouvelles transactions ajoutées`);
+        } else {
+          console.log('Aucune nouvelle transaction à ajouter');
+        }
+      }
+
+      // Fonction pour traiter un bloc reçu
+      function processReceivedBlock(block) {
+        try {
+          console.log(`Traitement du bloc reçu #${block.index}`);
+          
+          // Vérifier si ce bloc existe déjà dans notre blockchain locale
+          const myBlockchainData = localStorage.getItem('blockchain');
+          let myBlockchain = myBlockchainData ? JSON.parse(myBlockchainData) : [];
+          
+          const blockExists = myBlockchain.some(b => b.hash === block.hash);
+          
+          if (!blockExists) {
+            // Ajouter le bloc à notre blockchain locale
+            myBlockchain.push(block);
+            localStorage.setItem('blockchain', JSON.stringify(myBlockchain));
+            
+            // Si nous utilisons un objet Blockchain personnalisé, mettre à jour aussi
+            if (myBlockchain.chain) {
+              myBlockchain.chain.push(block);
+              myBlockchain.saveToLocalStorage();
+            }
+            
+            // Nettoyer le mempool des transactions incluses dans ce bloc
+            if (block.transactions && block.transactions.length > 0) {
+              const txCount = cleanMempool(block.transactions);
+              console.log(`${txCount} transaction(s) retirée(s) du mempool`);
+            }
+            
+            // Mettre à jour l'affichage
+            updateMempoolDisplay();
+            updateAllWalletBalances();
+            
+            // Notification à l'utilisateur
+            showTransactionNotification('Nouveau Bloc', `Le bloc #${block.index} a été ajouté à la blockchain`);
+          }
+        } catch (error) {
+          console.error("Erreur lors du traitement du bloc reçu:", error);
+        }
+      }
+    </script>
+  </body>
+</html>

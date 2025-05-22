@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHA-256 Hash</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 107vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 80px 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 700;
+            color: #2d3748;
+            text-decoration: none;
+            font-size: 1.8rem;
+            transition: all 0.3s ease;
+            margin-right: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding: 0.2rem 1rem;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 1.2rem;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #667eea;
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a.active {
+            color: #667eea;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            min-width: 500px;
+            margin: 0 auto;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.8rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        #output {
+            background-color: #f7fafc;
+            resize: none;
+
+        }
+
+        nav .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: flex-start;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-container">
+          <a href="./index.html" class="logo">SUBCHAINE</a>
+          <div class="nav-links">
+            <a href="./SHA-256.html" class="active">SHA-256 Hash</a>
+            <a href="./cryptage.html">Encrypt hash</a>
+            <a href="./transaction.html">Transaction</a>
+            <a href="./wallet.html">Wallet</a>
+            <a href="./block.html">Mining</a>
+            <a href="./blockchain-visualizer.html">Visualiser</a>
+          </div>
+        </div>
+      </nav>
+
+    <div class="container">
+        <h1>SHA-256 Hash</h1>
+        
+        <div class="input-group">
+            <label for="input">Entrée texte:</label>
+            <input type="text" id="input" placeholder="Saisissez votre texte ici...">
+        </div>
+
+        <button onclick="generateHash()">Hasher le message</button>
+
+        <div class="input-group">
+            <label for="output">Message hashé:</label>
+            <textarea id="output" readonly placeholder="Votre hash apparaîtra ici..."></textarea>
+        </div>
+
+    </div>
+
+    <script>
+        // Script précédent inchangé
+        function generateHash() {
+            const input = document.getElementById('input').value;
+            
+            if (!input) {
+                alert('Veuillez saisir du texte à hasher');
+                return;
+            }
+
+            const hash = CryptoJS.SHA256(input).toString(CryptoJS.enc.Hex);
+            document.getElementById('output').value = hash;
+        }
+
+        document.getElementById('input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateHash();
+            }
+        });
+
+        // Ajout d'un effet de scroll fluide pour la navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

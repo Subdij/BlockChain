@@ -1,0 +1,67 @@
+# SUBCHAINE - Simulateur de Blockchain
+
+## Description
+SUBCHAINE est un simulateur de blockchain interactif conçu à des fins éducatives. Cette application web permet aux utilisateurs de comprendre les concepts fondamentaux de la technologie blockchain en simulant toutes ses fonctionnalités essentielles : création de wallets, minage de blocs, transactions sécurisées, et visualisation de la blockchain.
+
+## Prérequis
+Pour exécuter cette application, vous aurez besoin de:
+- Node.js (version 14.0 ou supérieure)
+- NPM (inclus avec Node.js)
+- Navigateur web moderne avec support JavaScript
+
+## Installation
+1. Clonez ce dépôt dans le dossier de votre choix:
+    ```
+    git clone [URL_DU_REPO] BlockChain
+    ```
+
+2. Installez les dépendances JavaScript:
+    ```
+    cd BlockChain
+    npm install
+    ```
+
+3. Les dépendances frontend sont déjà incluses via CDN:
+   - crypto-js (pour les fonctions de hachage)
+   - elliptic (pour la cryptographie à courbe elliptique)
+
+## Lancement de l'application
+1. Démarrez le serveur Node.js:
+    ```
+    node server.js
+    ```
+2. Accédez à l'application via votre navigateur:
+    ```
+    http://localhost:3000
+    ```
+
+## Structure du projet
+- `/public` - Contient les pages HTML, CSS et le JavaScript frontend
+  - `block.html` - Interface de minage
+  - `wallet.html` - Gestionnaire de wallets
+  - `transaction.html` - Création de transactions
+  - `blockchain-visualizer.html` - Visualiseur de la blockchain
+  - `cryptage.html` - Démonstration de cryptographie
+  - `SHA-256.html` - Démonstration de hachage
+- `server.js` - Serveur backend Node.js/Express
+- `package.json` - Configuration du projet et dépendances
+
+## Fonctionnalités principales
+- Gestion de wallets avec paires de clés cryptographiques
+- Transactions sécurisées avec signature cryptographique
+- Minage de blocs avec Proof of Work et récompenses
+- Visualisation graphique de la blockchain
+- Communication en temps réel entre utilisateurs
+- Démonstrations pédagogiques des mécanismes cryptographiques
+
+## Technologies utilisées
+- Backend: Node.js, Express
+- Frontend: HTML, CSS, JavaScript vanilla
+- Communication temps réel: Socket.io
+- Cryptographie: crypto-js, elliptic (courbe elliptique secp256k1)
+
+## Guide d'utilisation
+1. **Création de wallet**: Accédez à la page "Wallet" et créez un wallet avec un pseudonyme
+2. **Transactions**: Utilisez la page "Transaction" pour envoyer des fonds entre wallets
+3. **Minage**: Sur la page "Mining", sélectionnez votre wallet et commencez le minage
+4. **Visualisation**: Explorez la structure de la blockchain sur la page "Visualiser"

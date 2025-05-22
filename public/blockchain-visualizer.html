@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visualisateur de Blockchain</title>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+    
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 80px 20px 20px;
+    }
+    
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    
+    .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: flex-start;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    
+    .nav-links a {
+      color: #4a5568;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+      font-size: 1.2rem;
+    }
+    
+    .nav-links a::after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #667eea;
+      transition: width 0.3s ease;
+    }
+    
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+    
+    .nav-links a.active {
+      color: #667eea;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.5rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 30px;
+      gap: 15px;
+      width: 100%;
+    }
+    
+    .controls button {
+      background: white;
+      color: #4a5568;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .controls button:hover {
+      background: #f0f4fd;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .controls button:active {
+      transform: translateY(0);
+    }
+    
+    .blockchain-container {
+      padding: 20px 0;
+      margin-bottom: 30px;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+  }
+    
+    .blockchain {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap; 
+      gap: 25px;
+      padding: 20px;
+      transition: transform 0.5s ease;
+      width: 100%; 
+      max-width: 1200px; 
+      justify-content: center;
+    }
+    
+    .block {
+      background: white;
+      width: calc(25% - 25px); 
+      min-width: 250px; 
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+      position: relative;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      
+      
+      
+      
+      opacity: 1; 
+      transform: translateY(0); 
+      margin-bottom: 30px; 
+    }
+    
+    .block:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.2);
+    }
+    
+    .block.expanded {
+      width: calc(50% - 25px); 
+      z-index: 10; 
+      cursor: default;
+    }
+    
+    .block.genesis {
+      border: 2px solid #48bb78;
+      background: linear-gradient(to bottom, white, #f0fff4);
+    }
+    
+    .block.new {
+      border: 2px solid #4299e1;
+      background: linear-gradient(to bottom, white, #ebf8ff);
+    }
+    
+    .block-header {
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 15px;
+      margin-bottom: 15px;
+    }
+    
+    .block-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .block-index {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #2d3748;
+    }
+    
+    .block-timestamp {
+      font-size: 0.8rem;
+      color: #718096;
+    }
+    
+    .hash-container {
+      background: #f7fafc;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .hash-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #718096;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .hash-value {
+      font-family: monospace;
+      word-break: break-all;
+      color: #2d3748;
+      font-size: 0.85rem;
+    }
+    
+    .hash-preview {
+      font-family: monospace;
+      color: #2d3748;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .prev-hash-value {
+      color: #4299e1;
+      cursor: pointer;
+    }
+    
+    .block-summary {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+    
+    .summary-item {
+      text-align: center;
+      width: 50%;
+    }
+    
+    .summary-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 5px;
+    }
+    
+    .summary-label {
+      font-size: 0.75rem;
+      color: #718096;
+      text-transform: uppercase;
+    }
+    
+    .block-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s ease;
+    }
+    
+    .block.expanded .block-content {
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    
+    .transactions-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 10px;
+      display: block;
+    }
+    
+    .transaction {
+      background: #f0f4fd;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 0.85rem;
+      color: #4a5568;
+    }
+    
+    .transaction.coinbase {
+      background: #c6f6d5;
+      border-left: 3px solid #48bb78;
+    }
+    
+    .transaction-details {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-family: monospace;
+    }
+    
+    .block-connect {
+      position: absolute;
+      right: -25px;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 2px;
+      width: 25px;
+      background-color: #718096;
+      display: none; 
+    }
+    
+    
+    .block:not(:nth-child(4n)):not(.genesis) .block-connect {
+      display: block;
+    }
+    
+    .block-badge {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: #4299e1;
+      color: white;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    
+    .expand-indicator {
+      text-align: center;
+      color: #a0aec0;
+      font-size: 0.8rem;
+      padding-top: 5px;
+    }
+    
+    .block:not(.expanded) .expand-indicator {
+      display: block;
+    }
+    
+    .block.expanded .expand-indicator {
+      display: none;
+    }
+    
+    .stats {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 30px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      width: 100%;
+      max-width: 1200px;
+    }
+    
+    .stats-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    
+    .stat-item {
+      text-align: center;
+      background: #f7fafc;
+      border-radius: 8px;
+      padding: 15px;
+    }
+    
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #4a5568;
+      margin-bottom: 5px;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: #718096;
+      font-weight: 500;
+    }
+    
+    
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(66, 153, 225, 0.5);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(66, 153, 225, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(66, 153, 225, 0);
+      }
+    }
+    
+    
+    @media (max-width: 1200px) {
+      .block {
+        width: calc(33.33% - 25px); 
+      }
+      
+      .block:not(:nth-child(3n)):not(.genesis) .block-connect {
+        display: block;
+      }
+      
+      .block:nth-child(3n):not(.genesis) .block-connect {
+        display: none;
+      }
+      
+      .block.expanded {
+        width: calc(66.66% - 25px);
+      }
+    }
+    
+    @media (max-width: 900px) {
+      .block {
+        width: calc(50% - 25px); 
+      }
+      
+      .block:not(:nth-child(2n)):not(.genesis) .block-connect {
+        display: block;
+      }
+      
+      .block:nth-child(2n):not(.genesis) .block-connect {
+        display: none;
+      }
+      
+      .block.expanded {
+        width: 100%;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .blockchain {
+        flex-direction: column;
+      }
+      
+      .block {
+        width: 100%;
+        margin-bottom: 25px;
+      }
+      
+      .block-connect {
+        left: 50%;
+        top: auto;
+        bottom: -25px;
+        transform: translateX(-50%) rotate(90deg);
+        width: 25px;
+        display: block;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    
+    .loader-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+      width: 100%;
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    .loader {
+      border: 5px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 5px solid #667eea;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    
+    @keyframes newBlockAnimation {
+      0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(66, 153, 225, 0.5); }
+      50% { transform: scale(1.05); opacity: 1; box-shadow: 0 0 20px rgba(66, 153, 225, 0.8); }
+      100% { transform: scale(1); opacity: 1; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); }
+    }
+    
+    .block.realtime-new {
+      animation: newBlockAnimation 1s forwards;
+      border: 2px solid #3182ce;
+    }
+    
+    
+    .toast-notification {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(49, 130, 206, 0.9);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: transform 0.4s ease, opacity 0.4s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .toast-notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .toast-icon {
+      font-size: 24px;
+    }
+    
+    .toast-content {
+      flex: 1;
+    }
+    
+    .toast-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    
+    .toast-message {
+      font-size: 0.9rem;
+    }
+    
+    .logo {
+      font-weight: 700;
+      color: #2d3748;
+      text-decoration: none;
+      font-size: 1.8rem;
+      transition: all 0.3s ease;
+      margin-right: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      padding: 0.2rem 1rem;
+
+    }
+    
+    .logo:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-container">
+      <a href="./index.html" class="logo">SUBCHAINE</a>
+      <div class="nav-links">
+        <a href="./SHA-256.html">SHA-256 Hash</a>
+        <a href="./cryptage.html">Encrypt hash</a>
+        <a href="./transaction.html">Transaction</a>
+        <a href="./wallet.html">Wallet</a>
+        <a href="./block.html">Mining</a>
+        <a href="./blockchain-visualizer.html" class="active">Visualiser</a>
+      </div>
+    </div>
+  </nav>
+  
+  <div class="container">
+    <div class="stats">
+        <h2 class="stats-title">Statistiques de la blockchain</h2>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value" id="blockCount">0</div>
+            <div class="stat-label">Blocs</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="txCount">0</div>
+            <div class="stat-label">Transactions</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="difficulty">3</div>
+            <div class="stat-label">Difficulté</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="totalValue">0 €</div>
+            <div class="stat-label">Valeur totale</div>
+          </div>
+        </div>
+      </div>
+    
+    <div class="controls">
+    </div>
+    
+    <div class="blockchain-container">
+      <div id="loading" class="loader-container">
+        <div class="loader"></div>
+      </div>
+      <div class="blockchain" id="blockchain">
+        
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Amélioration de la connexion socket.io avec gestion des erreurs
+    let socket;
+    let connected = false;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    
+    // Événements du document
+    document.addEventListener('DOMContentLoaded', function() {
+      // Ajouter un indicateur de statut de connexion
+      const controls = document.querySelector('.controls');
+      const statusIndicator = document.createElement('div');
+      statusIndicator.id = 'connection-status';
+      statusIndicator.style.padding = '10px';
+      statusIndicator.style.borderRadius = '5px';
+      statusIndicator.style.marginLeft = '10px';
+      statusIndicator.style.fontWeight = 'bold';
+      statusIndicator.textContent = 'Connexion...';
+      statusIndicator.style.background = '#f0f0f0';
+      statusIndicator.style.color = '#666';
+      controls.appendChild(statusIndicator);
+
+      // Ajouter des boutons à l'interface
+
+      
+      // Initialiser la connexion Socket.io
+      initSocketConnection();
+      
+      // Charger la blockchain réelle
+      loadRealBlockchain();
+      
+      // Ajouter les gestionnaires d'événements
+      document.getElementById('refreshBtn').addEventListener('click', loadRealBlockchain);
+      document.getElementById('debugBtn').addEventListener('click', debugBlockchain);
+      document.getElementById('repairBtn').addEventListener('click', repairBlockchain);
+      document.getElementById('syncBtn').addEventListener('click', syncBlockchain);
+      
+      // Ajouter l'auto-rafraîchissement
+      setupAutoRefresh();
+
+      // Synchronize with the network automatically on page load
+      setTimeout(() => {
+        syncBlockchain();
+      }, 2000); // Delay to ensure socket connection is established
+    });
+    
+    // Fonction améliorée pour initialiser et gérer la connexion Socket.io
+    function initSocketConnection() {
+      try {
+        console.log("Initialisation de la connexion Socket.io...");
+        
+        // Création d'une nouvelle connexion avec options optimisées
+        socket = io({
+          reconnectionAttempts: maxReconnectAttempts,
+          reconnectionDelay: 1000,
+          timeout: 10000,
+          transports: ['websocket', 'polling'] // WebSocket prioritaire, polling en fallback
+        });
+        
+        // Gestion des événements de connexion
+        socket.on('connect', () => {
+          console.log(`Connecté au serveur Socket.IO (ID: ${socket.id})`);
+          connected = true;
+          reconnectAttempts = 0;
+          updateConnectionStatus(true);
+          
+          // Réinitialiser les écouteurs pour éviter les doublons
+          socket.off('blockBroadcast');
+          socket.off('transactionBroadcast');
+          socket.off('blockchainState');
+          socket.off('clientCount');
+          socket.off('fullBlockchain');
+          
+          // Écouter les nouveaux blocs
+          socket.on('blockBroadcast', function(newBlock) {
+            console.log("Nouveau bloc reçu via Socket.io:", newBlock);
+            handleRealtimeNewBlock(newBlock);
+          });
+          
+          // Écouter les nouvelles transactions pour le mempool
+          socket.on('transactionBroadcast', (tx) => {
+            console.log('Nouvelle transaction reçue dans le mempool:', tx);
+            showNotification('Nouvelle transaction', `Transaction de ${tx.amount}€ en attente de minage`);
+          });
+          
+          // Écouter l'état complet de la blockchain
+          socket.on('blockchainState', (state) => {
+            console.log('État complet de la blockchain reçu:', state);
+            document.getElementById('clientCount').textContent = state.connectedClients;
+          });
+          
+          // Écouter le nombre de clients connectés
+          socket.on('clientCount', (data) => {
+            console.log(`${data.count} clients connectés au serveur`);
+            if (document.getElementById('clientCount')) {
+              document.getElementById('clientCount').textContent = data.count;
+            }
+          });
+          
+          // Nouveau: écouter les mises à jour complètes de blockchain
+          socket.on('fullBlockchain', (remoteChain) => {
+            console.log(`Blockchain complète reçue du serveur (${remoteChain.length} blocs)`);
+            
+            // Charger notre blockchain locale
+            const localChain = JSON.parse(localStorage.getItem('blockchain') || '[]');
+            
+            // Si la chaîne distante est plus longue, fusionner
+            if (remoteChain.length > localChain.length) {
+              const mergedChain = mergeBlockchains(localChain, remoteChain);
+              localStorage.setItem('blockchain', JSON.stringify(mergedChain));
+              showNotification(`Blockchain mise à jour avec ${mergedChain.length} blocs`);
+              
+              // Recharger l'affichage
+              loadRealBlockchain();
+            }
+          });
+          
+          // Demander l'état actuel de la blockchain au serveur
+          socket.emit('requestBlockchainState', {}, function(state) {
+            console.log('État initial reçu du serveur:', state);
+            if (document.getElementById('clientCount')) {
+              document.getElementById('clientCount').textContent = state.connectedClients;
+            }
+          });
+          
+          // Synchronisation automatique au démarrage
+          setTimeout(() => {
+            syncBlockchain();
+          }, 2000);
+        });
+        
+        // Gestion de déconnexion et reconnexion
+        socket.on('disconnect', (reason) => {
+          console.log(`Déconnecté du serveur Socket.IO (Raison: ${reason})`);
+          connected = false;
+          updateConnectionStatus(false, reason);
+        });
+        
+        socket.on('reconnecting', (attemptNumber) => {
+          console.log(`Tentative de reconnexion #${attemptNumber}...`);
+          reconnectAttempts = attemptNumber;
+          updateConnectionStatus(false, 'reconnecting', attemptNumber);
+        });
+        
+        socket.on('reconnect_failed', () => {
+          console.error(`Échec de reconnexion après ${maxReconnectAttempts} tentatives`);
+          updateConnectionStatus(false, 'failed');
+        });
+        
+        socket.on('error', (error) => {
+          console.error('Erreur Socket.IO:', error);
+          updateConnectionStatus(false, 'error');
+        });
+      } catch (error) {
+        console.error("Erreur lors de l'initialisation de Socket.io:", error);
+        updateConnectionStatus(false, 'error');
+      }
+    }
+    
+    // Fonction pour mettre à jour l'indicateur de statut de connexion
+    function updateConnectionStatus(isConnected, reason = '', attempt = 0) {
+      const statusIndicator = document.getElementById('connection-status');
+      if (!statusIndicator) return;
+      
+      if (isConnected) {
+        statusIndicator.textContent = 'Connecté';
+        statusIndicator.style.background = '#c6f6d5'; // Vert clair
+        statusIndicator.style.color = '#22543d'; // Vert foncé
+      } else {
+        if (reason === 'reconnecting') {
+          statusIndicator.textContent = `Reconnexion... (${attempt}/${maxReconnectAttempts})`;
+          statusIndicator.style.background = '#feebc8'; // Jaune clair
+          statusIndicator.style.color = '#7b341e'; // Orange foncé
+        } else if (reason === 'failed') {
+          statusIndicator.textContent = 'Échec de connexion';
+          statusIndicator.style.background = '#fed7d7'; // Rouge clair
+          statusIndicator.style.color = '#822727'; // Rouge foncé
+        } else {
+          statusIndicator.textContent = 'Déconnecté';
+          statusIndicator.style.background = '#fed7d7'; // Rouge clair
+          statusIndicator.style.color = '#822727'; // Rouge foncé
+        }
+      }
+    }
+    
+    // Fonction dédiée pour gérer les nouveaux blocs
+    function handleNewBlock(block) {
+      console.log('Nouveau bloc reçu via Socket.io:', block);
+      
+      // Ajouter le bloc à la visualisation
+      try {
+        // Charger la blockchain actuelle pour déterminer le bon index
+        const currentBlockchain = JSON.parse(localStorage.getItem('blockchain') || '[]');
+        
+        // Vérifier si ce bloc existe déjà par hash (critère unique)
+        const existingBlockByHash = document.querySelector(`.block[data-hash="${block.hash}"]`);
+        if (existingBlockByHash) {
+          console.log(`Le bloc avec hash ${block.hash.substring(0,8)}... existe déjà, pas besoin de l'ajouter à nouveau`);
+          return;
+        }
+        
+        // Si un bloc avec le même index existe déjà mais hash différent, c'est un fork possible
+        const existingBlockByIndex = document.getElementById(`block-${block.index}`);
+        if (existingBlockByIndex) {
+          console.log(`Un bloc avec index ${block.index} existe déjà mais avec un hash différent. Possible fork détecté.`);
+          // Pour notre visualiseur simple, nous afficherons les deux blocs en cas de fork
+        }
+        
+        // Vérifier si l'index est défini et cohérent
+        if (typeof block.index === 'undefined') {
+          const blockchainContainer = document.getElementById('blockchain');
+          if (blockchainContainer.children.length > 0) {
+            block.index = parseInt(blockchainContainer.children[0].getAttribute('data-index')) + 1;
+          } else {
+            block.index = 0;
+          }
+        }
+        
+        // CORRECTION: Attribuer le bon index au bloc
+        block.index = currentBlockchain.length;
+        
+        // Déterminer si c'est un bloc de genèse
+        const isGenesis = block.index === 0;
+        
+        // S'assurer que le Merkle Root est défini
+        if (!block.merkleRoot) {
+          console.log("Calcul du Merkle Root pour le bloc reçu...");
+          // Créer un objet Block temporaire pour calculer le Merkle Root
+          const tempBlock = new Block(
+            block.index,
+            block.previousHash,
+            block.transactions
+          );
+          block.merkleRoot = tempBlock.calculateMerkleRoot();
+        }
+        
+        // Ajouter le bloc à la visualisation avec l'animation "nouveau"
+        addBlockToVisualizer(block, isGenesis, true);
+        
+        // Mettre à jour les statistiques
+        updateStats();
+        
+        // Stocker le bloc dans localStorage
+        updateLocalStorage(block);
+        
+        // Afficher une notification pour informer l'utilisateur
+        showNotification(`Nouveau bloc #${block.index} avec hash ${block.hash.substring(0,8)}... ajouté à la chaîne`);
+        
+        // Recharger les blocs après un court délai pour assurer un affichage cohérent
+        setTimeout(() => {
+          checkBlockConnections();
+        }, 500);
+      } catch (error) {
+        console.error('Erreur lors du traitement du nouveau bloc:', error);
+      }
+    }
+    
+    // Fonction pour mettre à jour localStorage avec le nouveau bloc
+    function updateLocalStorage(newBlock) {
+      try {
+        const currentBlockchain = JSON.parse(localStorage.getItem('blockchain') || '[]');
+        
+        // Vérifier si le bloc existe déjà par son hash uniquement (critère unique)
+        const blockExists = currentBlockchain.some(block => block.hash === newBlock.hash);
+        
+        if (!blockExists) {
+          // CORRECTION: Attribuer le bon index au bloc avant de l'ajouter
+          newBlock.index = currentBlockchain.length;
+          
+          // Ajouter le bloc
+          currentBlockchain.push(newBlock);
+          
+          // Sauvegarder dans localStorage
+          localStorage.setItem('blockchain', JSON.stringify(currentBlockchain));
+          console.log(`Bloc #${newBlock.index} (hash ${newBlock.hash.substring(0,8)}...) ajouté à localStorage`);
+        } else {
+          console.log(`Bloc ${newBlock.hash.substring(0,8)}... existe déjà dans localStorage`);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour de la blockchain dans localStorage:", error);
+      }
+    }
+    
+    // Fonction pour afficher une notification temporaire
+    function showNotification(message) {
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notification.style.position = 'fixed';
+      notification.style.bottom = '20px';
+      notification.style.right = '20px';
+      notification.style.background = 'rgba(0, 0, 0, 0.8)';
+      notification.style.color = 'white';
+      notification.style.padding = '10px 20px';
+      notification.style.borderRadius = '5px';
+      notification.style.zIndex = '1000';
+      notification.style.transition = 'opacity 0.5s';
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 500);
+      }, 3000);
+    }
+
+    // Fonction améliorée pour charger la blockchain réelle depuis localStorage
+    function loadRealBlockchain() {
+      // Afficher le loader
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('blockchain').innerHTML = '';
+      
+      setTimeout(() => {
+        try {
+          // Essayer de charger la blockchain depuis différents emplacements possibles
+          let blockchain = [];
+          
+          // Essayer de charger depuis 'blockchain'
+          const blockchainData = localStorage.getItem('blockchain');
+          if (blockchainData) {
+            blockchain = JSON.parse(blockchainData);
+            console.log("Blockchain chargée depuis 'blockchain' :", blockchain);
+          }
+          
+          // Si pas de données, essayer 'myBlockchain'
+          if (!blockchain || blockchain.length === 0) {
+            const myBlockchainData = localStorage.getItem('myBlockchain');
+            if (myBlockchainData) {
+              const parsed = JSON.parse(myBlockchainData);
+              if (parsed && parsed.chain && Array.isArray(parsed.chain)) {
+                blockchain = parsed.chain;
+                console.log("Blockchain chargée depuis 'myBlockchain.chain' :", blockchain);
+              }
+            }
+          }
+          
+          // Si toujours pas de données, créer un bloc de genèse
+          if (!blockchain || blockchain.length === 0) {
+            blockchain = [createGenesisBlock()];
+            localStorage.setItem('blockchain', JSON.stringify(blockchain));
+            console.log("Blockchain vide, création d'un bloc de genèse");
+          }
+          
+          console.log(`Blockchain chargée: ${blockchain.length} blocs`);
+
+          // AJOUT: Vérification automatique de l'intégrité de la blockchain
+          const repairNeeded = verifyBlockchainIntegrity(blockchain);
+          
+          // Si la blockchain a besoin de réparation, la réparer automatiquement
+          if (repairNeeded) {
+            console.log("Incohérences détectées dans la blockchain, réparation automatique...");
+            blockchain = repairBlockchainData(blockchain);
+            // Sauvegarder la blockchain réparée
+            localStorage.setItem('blockchain', JSON.stringify(blockchain));
+            showNotification("La blockchain a été réparée automatiquement pour corriger des incohérences");
+          }
+          
+          blockchain.forEach((block, idx) => {
+            console.log(`Bloc #${idx}: Hash=${block.hash?.substring(0,8)}..., ${block.transactions?.length || 0} transactions`);
+          });
+          
+          // Masquer le loader
+          document.getElementById('loading').style.display = 'none';
+          
+          // Effacer le contenu actuel
+          const blockchainContainer = document.getElementById('blockchain');
+          blockchainContainer.innerHTML = '';
+          
+          // Trier les blocs par index si nécessaire
+          blockchain.sort((a, b) => (a.index || 0) - (b.index || 0));
+          
+          // CORRECTION: S'assurer que tous les blocs ont des index corrects et séquentiels
+          blockchain = blockchain.map((block, index) => {
+            block.index = index; // Forcer l'index à être séquentiel
+            return block;
+          });
+          
+          // Sauvegarder la blockchain corrigée
+          localStorage.setItem('blockchain', JSON.stringify(blockchain));
+          
+          // Configurer le conteneur pour le centrage
+          blockchainContainer.style.overflowX = 'auto';
+          blockchainContainer.style.padding = '20px';
+          blockchainContainer.style.width = '100%';
+          blockchainContainer.style.display = 'flex';
+          blockchainContainer.style.justifyContent = 'center';
+          
+          // Ajouter chaque bloc avec un délai pour l'animation (du plus récent au plus ancien)
+          // Nous parcourons la chaîne dans son ordre normal (du plus ancien au plus récent)
+          blockchain.forEach((block, index) => {
+            // Assigner un index si manquant
+            if (typeof block.index === 'undefined') {
+              block.index = index;
+            }
+            
+            const isGenesis = block.index === 0;
+            // Ajouter le bloc immédiatement sans délai
+            addBlockToVisualizer(block, isGenesis, index === blockchain.length - 1);
+            
+            // Mettre à jour les statistiques après avoir ajouté le dernier bloc
+            if (index === blockchain.length - 1) {
+              updateStats(blockchain);
+              
+              // Ajouter une notification pour indiquer le nombre de blocs chargés
+              showNotification(`${blockchain.length} blocs chargés avec succès`);
+            }
+          });
+          
+        } catch (error) {
+          console.error("Erreur lors du chargement de la blockchain:", error);
+          document.getElementById('loading').style.display = 'none';
+          alert(`Erreur lors du chargement de la blockchain: ${error.message}. Une blockchain simulée sera utilisée.`);
+          
+          // En cas d'erreur, créer un genesis block
+          const blockchainContainer = document.getElementById('blockchain');
+          blockchainContainer.innerHTML = '';
+          
+          const genesisBlock = createGenesisBlock();
+          addBlockToVisualizer(genesisBlock, true);
+          updateStats([genesisBlock]);
+        }
+      }, 500); // Petit délai pour montrer le loader
+    }
+    
+    // AJOUT: Fonction pour vérifier l'intégrité de la blockchain
+    function verifyBlockchainIntegrity(blockchain) {
+      if (!blockchain || blockchain.length <= 1) return false;
+      
+      let needsRepair = false;
+      
+      // Vérifier si les index sont séquentiels et si les hash précédents correspondent
+      for (let i = 1; i < blockchain.length; i++) {
+        const currentBlock = blockchain[i];
+        const prevBlock = blockchain[i-1];
+        
+        // Vérifier l'index
+        if (currentBlock.index !== i) {
+          console.log(`Erreur d'index pour le bloc #${i}, index stocké: ${currentBlock.index}`);
+          needsRepair = true;
+        }
+        
+        // Vérifier le hash précédent
+        if (currentBlock.previousHash !== prevBlock.hash) {
+          console.log(`Erreur de hash pour le bloc #${i}:`);
+          console.log(`  Hash précédent stocké: ${currentBlock.previousHash?.substring(0,20) || 'undefined'}`);
+          console.log(`  Hash réel du bloc précédent: ${prevBlock.hash?.substring(0,20) || 'undefined'}`);
+          needsRepair = true;
+        }
+      }
+      
+      return needsRepair;
+    }
+    
+    // AJOUT: Fonction pour réparer automatiquement la blockchain
+    function repairBlockchainData(blockchain) {
+      if (!blockchain || blockchain.length <= 1) return blockchain;
+      
+      // 1. S'assurer que les index sont séquentiels
+      blockchain = blockchain.map((block, index) => {
+        block.index = index;
+        return block;
+      });
+      
+      // 2. Reconstruire les références de hash
+      for (let i = 1; i < blockchain.length; i++) {
+        blockchain[i].previousHash = blockchain[i-1].hash;
+      }
+      
+      console.log("Blockchain réparée avec succès");
+      return blockchain;
+    }
+    
+    // Fonction pour créer un bloc de genèse si nécessaire
+    function createGenesisBlock() {
+      return {
+        index: 0,
+        timestamp: new Date().toISOString(),
+        transactions: [],
+        previousHash: "0",
+        hash: CryptoJS.SHA256("Genesis Block").toString(),
+        nonce: 0
+      };
+    }
+    
+    // Fonction améliorée pour ajouter un bloc à la visualisation
+    function addBlockToVisualizer(block, isGenesis = false, isNew = false) {
+      const blockchainContainer = document.getElementById('blockchain');
+      
+      // Vérifier si les propriétés nécessaires sont présentes
+      if (!block.index && block.index !== 0) block.index = blockchainContainer.children.length;
+      if (!block.timestamp) block.timestamp = new Date().toISOString();
+      if (!block.hash) block.hash = "hash_manquant_" + Math.random().toString(36).substring(2, 15);
+      if (!block.previousHash) block.previousHash = "0";
+      if (!block.transactions) block.transactions = [];
+      
+      // Créer l'élément de bloc
+      const blockElement = document.createElement('div');
+      blockElement.className = `block ${isGenesis ? 'genesis' : ''} ${isNew ? 'new' : ''}`;
+      blockElement.setAttribute('data-index', block.index);
+      blockElement.setAttribute('data-hash', block.hash);
+      blockElement.setAttribute('data-prev-hash', block.previousHash);
+      blockElement.setAttribute('id', `block-${block.index}`);
+      
+      // Calculer le nombre de transactions
+      const txCount = block.transactions ? block.transactions.length : 0;
+      
+      // Trouver la transaction coinbase et calculer la récompense
+      let reward = 0;
+      if (block.transactions && block.transactions.length > 0) {
+        // Chercher la transaction coinbase (première transaction ou marquée coinbase)
+        const coinbaseTx = block.transactions.find(tx => 
+          tx.coinbase === true || tx.from === 'COINBASE' || 
+          // Aussi vérifier la première transaction si aucune n'est explicitement marquée
+          (tx === block.transactions[0] && (tx.from === 'COINBASE' || tx.from === 'Récompense'))
+        );
+        
+        if (coinbaseTx) {
+          // S'assurer que la récompense est toujours un nombre
+          reward = parseFloat(coinbaseTx.amount || "0");
+          
+          // Correction: si nous sommes dans un bloc normal (non genesis) et la récompense est 0,
+          // attribuer la récompense de base de 50€
+          if (!isGenesis && (reward === 0 || isNaN(reward)) && block.index > 0) {
+            reward = 50; // Récompense de base par défaut
+            console.log(`Correction de la récompense pour le bloc #${block.index}: ${reward}€`);
+          }
+        } else if (!isGenesis && block.index > 0) {
+          // Si on ne trouve pas de transaction coinbase mais c'est un bloc normal, 
+          // utiliser la récompense par défaut de 50€
+          reward = 50;
+          console.log(`Récompense par défaut pour bloc #${block.index}: ${reward}€`);
+        }
+      }
+      
+      // Badge pour le nombre de transactions
+      if (txCount > 0) {
+        blockElement.innerHTML += `<div class="block-badge">${txCount}</div>`;
+      }
+      
+      // Ligne connectant au bloc précédent (sauf pour genesis)
+      if (!isGenesis) {
+        blockElement.innerHTML += `<div class="block-connect"></div>`;
+      }
+      
+      // En-tête du bloc avec informations essentielles
+      blockElement.innerHTML += `
+        <div class="block-header">
+          <div class="block-title">
+            <div class="block-index">Bloc #${block.index}</div>
+            <div class="block-timestamp">${new Date(block.timestamp).toLocaleDateString()} ${new Date(block.timestamp).toLocaleTimeString()}</div>
+          </div>
+          
+          <div class="hash-container">
+            <span class="hash-label">Hash</span>
+            <div class="hash-preview">${block.hash.substring(0, 20)}...</div>
+          </div>
+        </div>
+        
+        <div class="block-summary">
+          <div class="summary-item">
+            <div class="summary-value">${txCount}</div>
+            <div class="summary-label">Transactions</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value">${reward} €</div>
+            <div class="summary-label">Récompense</div>
+          </div>
+        </div>
+        
+        <div class="expand-indicator">Cliquez pour voir les détails</div>
+          
+          <div class="block-content">
+            <div class="hash-container">
+              <span class="hash-label">Hash complet</span>
+              <div class="hash-value">${block.hash}</div>
+            </div>
+            
+            <div class="hash-container">
+              <span class="hash-label">Hash précédent</span>
+              <div class="hash-value prev-hash-value" onclick="event.stopPropagation(); highlightBlock('${block.previousHash}')">${block.previousHash}</div>
+            </div>
+            
+            <div class="hash-container">
+              <span class="hash-label">Nonce</span>
+              <div class="hash-value">${block.nonce || 0}</div>
+            </div>
+            
+            <div class="transactions-label">Transactions (${txCount})</div>
+            <div class="transactions-list">
+          `;
+          
+          // Ajouter les transactions
+          if (block.transactions && block.transactions.length > 0) {
+            block.transactions.forEach(tx => {
+              const isCoinbase = tx.coinbase || tx.from === "COINBASE";
+              
+              blockElement.querySelector('.transactions-list').innerHTML += `
+                <div class="transaction ${isCoinbase ? 'coinbase' : ''}">
+                  ${isCoinbase ? 
+                    `<div class="transaction-details">
+                      <span>Récompense de minage</span>
+                      <span>${tx.amount} €</span>
+                    </div>
+                    <div>→ ${formatAddress(tx.to)}</div>` : 
+                    `<div class="transaction-details">
+                      <span>Transfert</span>
+                      <span>${tx.amount} € + ${tx.fee || '0'} € frais</span>
+                    </div>
+                    <div>${formatAddress(tx.from)} → ${formatAddress(tx.to)}</div>`
+                  }
+                </div>
+              `;
+            });
+          } else {
+            blockElement.querySelector('.transactions-list').innerHTML = `<p>Aucune transaction dans ce bloc</p>`;
+          }
+          
+          // Ajouter le Merkle Root dans la section détails du bloc
+          blockElement.querySelector('.block-content').innerHTML += `
+            <div class="hash-container">
+              <span class="hash-label">Merkle Root</span>
+              <div class="hash-value">${block.merkleRoot || "Non disponible"}</div>
+            </div>
+          `;
+          
+          blockElement.innerHTML += `</div>`;
+          
+          // Ajouter l'événement de clic pour étendre/réduire
+          blockElement.addEventListener('click', function() {
+            toggleBlockDetails(this);
+          });
+          
+          // Ajouter le bloc au début du conteneur
+          if (blockchainContainer.firstChild) {
+            blockchainContainer.insertBefore(blockElement, blockchainContainer.firstChild);
+          } else {
+            blockchainContainer.appendChild(blockElement);
+          }
+          
+          // Faire défiler vers le nouveau bloc avec une animation fluide
+          blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          return blockElement;
+        }
+        
+        // Fonction pour sauvegarder le bloc dans localStorage
+        function saveBlockLocally(block) {
+          try {
+            const blockchainData = localStorage.getItem('blockchain');
+            let blockchain = blockchainData ? JSON.parse(blockchainData) : [];
+            
+            // Vérifier si le bloc existe déjà
+            const blockExists = blockchain.some(existingBlock => existingBlock.hash === block.hash);
+            
+            if (!blockExists) {
+              // Assurer que l'index est correct
+              block.index = blockchain.length;
+              
+              // Ajouter le bloc
+              blockchain.push(block);
+              localStorage.setItem('blockchain', JSON.stringify(blockchain));
+              console.log(`Bloc #${block.index} sauvegardé dans localStorage`);
+            }
+          } catch (error) {
+            console.error("Erreur lors de la sauvegarde du bloc:", error);
+          }
+        }
+        
+        // Fonction pour afficher une notification pour le nouveau bloc
+        function showBlockNotification(block) {
+          // Créer l'élément de notification
+          let notification = document.getElementById('block-notification');
+          if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'block-notification';
+            notification.className = 'toast-notification';
+            
+            notification.innerHTML = `
+              <div class="toast-icon">🧱</div>
+              <div class="toast-content">
+                <div class="toast-title">Nouveau bloc reçu</div>
+                <div class="toast-message" id="toast-message"></div>
+              </div>
+            `;
+            
+            document.body.appendChild(notification);
+          }
+          
+          // Mettre à jour le contenu
+          const messageEl = document.getElementById('toast-message');
+          if (messageEl) {
+            messageEl.textContent = `Bloc #${block.index} avec ${block.transactions?.length || 0} transactions vient d'être ajouté à la blockchain`;
+          }
+          
+          // Afficher la notification
+          notification.classList.add('show');
+          
+          // Cacher la notification après 5 secondes
+          setTimeout(() => {
+            notification.classList.remove('show');
+          }, 5000);
+        }
+        
+        // Modifier la fonction setupAutoRefresh pour être plus efficace
+        function setupAutoRefresh() {
+          // Vérification périodique de la connexion avec le serveur
+          setInterval(() => {
+            if (connected) {
+              // Heartbeat pour vérifier la latence et maintenir la connexion
+              socket.emit('heartbeat', (response) => {
+                const latency = new Date() - new Date(response.serverTime);
+                console.log(`Connexion au serveur: OK (latence ${latency}ms)`);
+              });
+            }
+          }, 30000); // Toutes les 30 secondes
+          
+          // Vérification locale des blocs dans localStorage moins fréquente
+          setInterval(() => {
+            try {
+              const blockchainData = localStorage.getItem('blockchain');
+              if (!blockchainData) return;
+              
+              const blockchain = JSON.parse(blockchainData);
+              const displayedBlockCount = document.querySelectorAll('.block').length;
+              
+              // Si le nombre de blocs dans localStorage est différent du nombre affiché,
+              // ajouter uniquement les blocs manquants sans recharger toute la page
+              if (blockchain.length > displayedBlockCount) {
+                console.log(`${blockchain.length - displayedBlockCount} nouveau(x) bloc(s) détecté(s) en stockage local`);
+                
+                // Identifier les blocs manquants
+                const displayedHashes = Array.from(document.querySelectorAll('.block'))
+                  .map(el => el.getAttribute('data-hash'));
+                
+                // Ajouter uniquement les blocs manquants
+                blockchain.forEach(block => {
+                  if (!displayedHashes.includes(block.hash)) {
+                    console.log(`Ajout du bloc local #${block.index} (${block.hash.substring(0, 8)}...)`);
+                    handleRealtimeNewBlock(block, false); // false = pas d'animation
+                  }
+                });
+                
+                // Mettre à jour les statistiques
+                updateStats();
+              }
+            } catch (error) {
+              console.error("Erreur lors de la vérification auto-refresh:", error);
+            }
+          }, 5000); // Toutes les 5 secondes
+        }
+    
+    // Nouvelle fonction pour vérifier et ajuster les connexions entre les blocs
+    function checkBlockConnections() {
+      const blocks = document.querySelectorAll('.block');
+      const blockArray = Array.from(blocks);
+      
+      // Réinitialiser tous les connecteurs
+      blocks.forEach(block => {
+        const connector = block.querySelector('.block-connect');
+        if (connector) {
+          connector.style.display = 'none';
+        }
+      });
+      
+      // Pour chaque bloc (sauf le dernier)
+      for (let i = 0; i < blockArray.length - 1; i++) {
+        const block = blockArray[i];
+        const nextBlock = blockArray[i + 1];
+        
+        // Si le bloc suivant fait référence à ce bloc via previousHash
+        if (nextBlock.getAttribute('data-prev-hash') === block.getAttribute('data-hash')) {
+          const connector = block.querySelector('.block-connect');
+          
+          // Vérifier si les blocs sont sur la même ligne (4 blocs par ligne)
+          const blockRect = block.getBoundingClientRect();
+          const nextBlockRect = nextBlock.getBoundingClientRect();
+          
+          // Si les blocs sont aproximativement sur la même ligne (tolérance de 50px)
+          if (Math.abs(blockRect.top - nextBlockRect.top) < 50) {
+            if (connector) {
+              connector.style.display = 'block';
+              connector.style.right = '-25px';
+              connector.style.top = '50%';
+              connector.style.transform = 'translateY(-50%)';
+              connector.style.width = '25px';
+              connector.style.height = '2px';
+            }
+          } else {
+            // Connection verticale si les blocs sont sur des lignes différentes
+            if (connector) {
+              connector.style.display = 'block';
+              connector.style.right = '50%';
+              connector.style.top = '100%';
+              connector.style.transform = 'translateX(50%)';
+              connector.style.width = '2px';
+              connector.style.height = '25px';
+            }
+          }
+        }
+      }
+    }
+    
+    // Fonction pour formater les adresses
+    function formatAddress(address) {
+      if (!address) return 'Adresse inconnue';
+      if (address === 'COINBASE') return 'COINBASE';
+      if (address.length > 20) {
+        return `${address.substring(0, 10)}...${address.substring(address.length - 4)}`;
+      }
+      return address;
+    }
+    
+    // Fonction pour basculer l'affichage détaillé d'un bloc
+    function toggleBlockDetails(blockElement) {
+      // Fermer tous les autres blocs ouverts
+      document.querySelectorAll('.block.expanded').forEach(el => {
+        if (el !== blockElement) {
+          el.classList.remove('expanded');
+        }
+      });
+      
+      // Basculer l'état du bloc actuel
+      blockElement.classList.toggle('expanded');
+    }
+    
+    // Fonction pour mettre en évidence un bloc en fonction de son hash
+    function highlightBlock(hash) {
+      if (hash === "0") return; // Ignorer le hash du genesis block
+      
+      const blocks = document.querySelectorAll('.block');
+      let found = false;
+      
+      blocks.forEach(block => {
+        if (block.getAttribute('data-hash') === hash) {
+          // Défiler vers le bloc
+          block.scrollIntoView({behavior: 'smooth', block: 'center'});
+          
+          // Effet de mise en surbrillance
+          const originalBackground = block.style.background;
+          block.style.background = '#fef3c7';
+          
+          setTimeout(() => {
+            block.style.background = originalBackground;
+          }, 2000);
+          
+          found = true;
+        }
+      });
+      
+      if (!found) {
+        alert("Bloc non trouvé dans la chaîne visualisée. Il pourrait appartenir à une chaîne différente ou être hors de la vue actuelle.");
+      }
+    }
+    
+    // Fonction pour mettre à jour les statistiques
+    function updateStats(blockchain) {
+      let totalBlocks = 0;
+      let totalTx = 0;
+      let difficulty = 3;
+      let totalValue = 0;
+      
+      if (blockchain) {
+        totalBlocks = blockchain.length;
+        
+        blockchain.forEach(block => {
+          if (block.transactions) {
+            totalTx += block.transactions.length;
+            
+            // Calculer la valeur totale des transactions
+            block.transactions.forEach(tx => {
+              if (tx.amount) {
+                totalValue += parseFloat(tx.amount);
+              }
+            });
+          }
+        });
+        
+        // Essayer de récupérer la difficulté
+        try {
+          difficulty = parseInt(localStorage.getItem('blockchainDifficulty')) || 3;
+        } catch (e) {
+          console.log("Difficulté par défaut utilisée");
+        }
+      } else {
+        // Si pas de blockchain fournie, compter les blocs affichés
+        totalBlocks = document.querySelectorAll('.block').length;
+        
+        document.querySelectorAll('.block').forEach(block => {
+          const txCountEl = block.querySelector('.summary-value');
+          if (txCountEl) {
+            totalTx += parseInt(txCountEl.textContent);
+          }
+        });
+      }
+      
+      document.getElementById('blockCount').textContent = totalBlocks;
+      document.getElementById('txCount').textContent = totalTx;
+      document.getElementById('difficulty').textContent = difficulty;
+      document.getElementById('totalValue').textContent = `${totalValue.toFixed(2)} €`;
+    }
+    
+    // Écouter les événements socket pour les mises à jour en temps réel
+    socket.on('blockBroadcast', (newBlock) => {
+      console.log("Nouveau bloc reçu:", newBlock);
+      
+      // Ajouter le nouveau bloc au début de la chaîne
+      const blockchainContainer = document.getElementById('blockchain');
+      if (blockchainContainer.children.length > 0) {
+        // S'assurer que le nouvel index est correct
+        if (typeof newBlock.index === 'undefined') {
+          newBlock.index = parseInt(blockchainContainer.children[0].getAttribute('data-index')) + 1;
+        }
+      }
+      
+      // Ajouter le bloc à la visualisation en tant que "nouveau"
+      addBlockToVisualizer(newBlock, newBlock.index === 0, true);
+      
+      // Mettre à jour les statistiques
+      const currentBlocks = parseInt(document.getElementById('blockCount').textContent);
+      document.getElementById('blockCount').textContent = currentBlocks + 1;
+      
+      // Enregistrer dans localStorage
+      try {
+        const currentBlockchain = JSON.parse(localStorage.getItem('blockchain') || '[]');
+        currentBlockchain.push(newBlock);
+        localStorage.setItem('blockchain', JSON.stringify(currentBlockchain));
+      } catch (error) {
+        console.error("Erreur lors de la mise à jour de la blockchain dans localStorage:", error);
+      }
+    });
+    
+    // Écouter les redimensionnements de la fenêtre pour ajuster les connexions
+    window.addEventListener('resize', debounce(function() {
+      checkBlockConnections();
+    }, 250));
+    
+    // Fonction utilitaire pour limiter les appels fréquents (debounce)
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Ajoutons un bouton pour déboguer la blockchain
+    document.addEventListener('DOMContentLoaded', function() {
+      // Ajouter le bouton de débogage après le bouton de rafraîchissement
+      const controls = document.querySelector('.controls');
+      
+      const debugButton = document.createElement('button');
+      debugButton.textContent = 'Déboguer la blockchain';
+      debugButton.addEventListener('click', debugBlockchain);
+      controls.appendChild(debugButton);
+    });
+    
+    // Fonction de débogage pour afficher des informations détaillées sur la blockchain
+    function debugBlockchain() {
+      try {
+        // Récupérer la blockchain depuis localStorage
+        const blockchainData = localStorage.getItem('blockchain');
+        if (!blockchainData) {
+          alert("Aucune blockchain trouvée dans localStorage.");
+          return;
+        }
+        
+        const blockchain = JSON.parse(blockchainData);
+        
+        // Créer un message de débogage formaté
+        let message = `== DÉBOGAGE BLOCKCHAIN ==\nNombre de blocs: ${blockchain.length}\n\n`;
+        let hasErrors = false;
+        
+        blockchain.forEach((block, index) => {
+          message += `BLOC #${block.index || index}\n`;
+          message += `- Index stocké: ${block.index}\n`;
+          message += `- Hash: ${block.hash?.substring(0, 20)}...\n`;
+          message += `- Hash précédent: ${block.previousHash?.substring(0, 20)}...\n`;
+          message += `- Transactions: ${block.transactions?.length || 0}\n`;
+          
+          // Vérifier si l'index est correct
+          if (block.index !== index) {
+            message += `⚠️ ERREUR: Index incorrect (stocké: ${block.index}, attendu: ${index})\n`;
+            hasErrors = true;
+          }
+          
+          // Vérifier la cohérence du previous hash (sauf pour le bloc genesis)
+          if (index > 0) {
+            const previousBlock = blockchain[index - 1];
+            if (block.previousHash !== previousBlock.hash) {
+              message += `⚠️ ERREUR: Le hash précédent ne correspond pas au hash du bloc précédent\n`;
+              hasErrors = true;
+            }
+          }
+          
+          message += `\n`;
+        });
+        
+        if (hasErrors) {
+          message += `\n⚠️ Des erreurs ont été détectées. Utilisez le bouton 'Réparer les index' pour tenter une correction.`;
+        } else {
+          message += `\n✅ Aucune erreur détectée. La blockchain est intègre.`;
+        }
+        
+        // Afficher le message
+        console.log(message);
+        alert(message);
+        
+        // Si des erreurs sont détectées, proposer de réparer automatiquement
+        if (hasErrors && confirm("Des erreurs ont été détectées dans la blockchain. Voulez-vous tenter une réparation automatique?")) {
+          repairBlockchain();
+        } else {
+          // Relancer le chargement de la blockchain 
+          document.querySelectorAll('.block').forEach(block => {
+            block.style.animation = 'pulse 1s infinite';
+          });
+          
+          setTimeout(() => {
+            loadRealBlockchain();
+          }, 1000);
+        }
+        
+      } catch (error) {
+        alert(`Erreur lors du débogage: ${error.message}`);
+        console.error(error);
+      }
+    }
+
+    // Améliorer la réactivité du visualisateur
+    window.addEventListener('load', function() {
+      // Force une relecture après chargement complet
+      setTimeout(checkBlockConnections, 1000);
+    });
+    
+    // Ajouter une fonction d'auto-rafraîchissement pour s'assurer que les blocs minés récemment sont affichés
+    function setupAutoRefresh() {
+      // Vérifier plus fréquemment s'il y a de nouveaux blocs dans localStorage
+      setInterval(() => {
+        try {
+          const blockchainData = localStorage.getItem('blockchain');
+          if (!blockchainData) return;
+          
+          const blockchain = JSON.parse(blockchainData);
+          const displayedBlockCount = document.querySelectorAll('.block').length;
+          
+          // Si le nombre de blocs dans localStorage est différent du nombre affiché,
+          // rafraîchir l'affichage
+          if (blockchain.length !== displayedBlockCount) {
+            console.log(`Auto-refresh: ${blockchain.length} blocs en stockage, ${displayedBlockCount} affichés`);
+            loadRealBlockchain();
+          }
+        } catch (error) {
+          console.error("Erreur lors de la vérification auto-refresh:", error);
+        }
+      }, 5000); // Vérifier toutes les 5 secondes (réduit de 10 à 5 secondes)
+    }
+
+    // Ajouter un bouton pour réparer les index de la blockchain
+    document.addEventListener('DOMContentLoaded', function() {
+      const controls = document.querySelector('.controls');
+      
+      // Ajouter un bouton de réparation après le bouton de débogage
+      const repairButton = document.createElement('button');
+      repairButton.textContent = 'Réparer les index';
+      repairButton.style.background = 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)';
+      repairButton.addEventListener('click', repairBlockchain);
+      controls.appendChild(repairButton);
+    });
+
+    // Fonction pour réparer la blockchain (version améliorée)
+    function repairBlockchain() {
+      try {
+        // Récupérer la blockchain depuis localStorage
+        const blockchainData = localStorage.getItem('blockchain');
+        if (!blockchainData) {
+          alert("Aucune blockchain trouvée dans localStorage à réparer.");
+          return;
+        }
+        
+        let blockchain = JSON.parse(blockchainData);
+        if (!blockchain || !Array.isArray(blockchain) || blockchain.length === 0) {
+          alert("Format de blockchain invalide ou vide.");
+          return;
+        }
+        
+        // Afficher des informations avant réparation
+        console.log(`Réparation de la blockchain commencée. ${blockchain.length} blocs à vérifier.`);
+        
+        // 1. Vérifier et corriger les index séquentiels
+        let modified = false;
+        
+        blockchain = blockchain.map((block, index) => {
+          if (block.index !== index) {
+            console.log(`Correction de l'index du bloc ${block.index} -> ${index}`);
+            block.index = index;
+            modified = true;
+          }
+          return block;
+        });
+        
+        // 2. Vérifier et corriger les références previousHash
+        for (let i = 1; i < blockchain.length; i++) {
+          const currentBlock = blockchain[i];
+          const previousBlock = blockchain[i - 1];
+          
+          // CORRECTION: Toujours mettre à jour le previousHash pour assurer la cohérence
+          if (currentBlock.previousHash !== previousBlock.hash) {
+            console.log(`Correction de la référence previousHash du bloc #${i}:`);
+            console.log(`  Ancien: ${currentBlock.previousHash?.substring(0, 15) || 'undefined'}...`);
+            console.log(`  Nouveau: ${previousBlock.hash?.substring(0, 15) || 'undefined'}...`);
+            
+            // Corriger la référence
+            currentBlock.previousHash = previousBlock.hash;
+            modified = true;
+          }
+        }
+        
+        if (modified) {
+          // Sauvegarder la blockchain réparée
+          localStorage.setItem('blockchain', JSON.stringify(blockchain));
+          console.log("Réparation terminée et sauvegardée.");
+          
+          // Recharger la visualisation
+          showNotification("Blockchain réparée avec succès! Rechargement...");
+          setTimeout(() => {
+            loadRealBlockchain();
+          }, 1500);
+        } else {
+          console.log("Aucune correction nécessaire. La blockchain est intègre.");
+          showNotification("La blockchain est déjà en bon état. Aucune réparation nécessaire.");
+        }
+        
+      } catch (error) {
+        console.error('Erreur lors de la réparation de la blockchain:', error);
+        alert(`Erreur lors de la réparation: ${error.message}`);
+      }
+    }
+    
+    // Modification de la fonction d'initialisation Socket.io pour renforcer la réception des blocs
+    function initSocketConnection() {
+      // Création d'une nouvelle connexion
+      socket = io({
+        reconnectionAttempts: maxReconnectAttempts,
+        timeout: 10000,
+        reconnectionDelay: 1000
+      });
+      
+      // Gestion des événements de connexion
+      socket.on('connect', () => {
+        console.log(`Connecté au serveur Socket.IO (ID: ${socket.id})`);
+        connected = true;
+        reconnectAttempts = 0;
+        updateConnectionStatus(true);
+        
+        // Réinitialiser tous les gestionnaires d'événements pour éviter les doublons
+        socket.off('blockBroadcast');
+        
+        // Déplacer cette écoute à l'intérieur de l'événement connect
+        socket.on('blockBroadcast', function(newBlock) {
+          console.log("Nouveau bloc reçu via Socket.io en temps réel:", newBlock);
+          
+          // Utiliser la fonction améliorée pour gérer les nouveaux blocs
+          handleRealtimeNewBlock(newBlock);
+        });
+        
+        // ...existing code...
+      });
+      
+      socket.on('disconnect', (reason) => {
+        console.log(`Déconnecté du serveur Socket.IO (Raison: ${reason})`);
+        connected = false;
+        updateConnectionStatus(false, reason);
+      });
+      
+      socket.on('reconnecting', (attemptNumber) => {
+        console.log(`Tentative de reconnexion #${attemptNumber}...`);
+        reconnectAttempts = attemptNumber;
+        updateConnectionStatus(false, 'reconnecting', attemptNumber);
+      });
+      
+      socket.on('reconnect_failed', () => {
+        console.error(`Échec de reconnexion après ${maxReconnectAttempts} tentatives`);
+        updateConnectionStatus(false, 'failed');
+      });
+      
+      socket.on('error', (error) => {
+        console.error('Erreur Socket.IO:', error);
+        updateConnectionStatus(false, 'error');
+      });
+    }
+    
+    // Nouvelle fonction améliorée pour gérer l'affichage en temps réel des nouveaux blocs
+    function handleRealtimeNewBlock(block) {
+      console.log('Traitement du bloc en temps réel:', block);
+      
+      try {
+        // Charger la blockchain actuelle pour déterminer le bon index
+        const currentBlockchain = JSON.parse(localStorage.getItem('blockchain') || '[]');
+        
+        // Vérifier si ce bloc existe déjà par hash (critère unique)
+        const existingBlockByHash = document.querySelector(`.block[data-hash="${block.hash}"]`);
+        if (existingBlockByHash) {
+          console.log(`Le bloc avec hash ${block.hash.substring(0,8)}... existe déjà, pas besoin de l'ajouter à nouveau`);
+          return;
+        }
+        
+        // Déterminer l'index correct pour ce bloc
+        block.index = currentBlockchain.length;
+        
+        // Créer une notification de nouveau bloc
+        showBlockNotification(block);
+        
+        // Ajouter le bloc à la visualisation avec classe spéciale pour animation en temps réel
+        addRealtimeBlockToVisualizer(block);
+        
+        // Mise à jour des statistiques
+        updateStats();
+        
+        // Enregistrer le bloc dans localStorage
+        saveBlockLocally(block);
+        
+        // Vérifier les connexions après l'ajout
+        setTimeout(checkBlockConnections, 500);
+      } catch (error) {
+        console.error('Erreur lors du traitement du nouveau bloc en temps réel:', error);
+      }
+    }
+    
+    // Nouvelle fonction pour ajouter un bloc en temps réel avec animation spéciale
+    function addRealtimeBlockToVisualizer(block) {
+      const blockchainContainer = document.getElementById('blockchain');
+      
+      // Créer l'élément de bloc avec la même structure que addBlockToVisualizer
+      const blockElement = document.createElement('div');
+      blockElement.className = 'block realtime-new'; // Ajouter classe spéciale pour animation
+      blockElement.setAttribute('data-index', block.index);
+      blockElement.setAttribute('data-hash', block.hash);
+      blockElement.setAttribute('data-prev-hash', block.previousHash);
+      blockElement.setAttribute('id', `block-${block.index}`);
+      
+      // Déterminer si c'est un bloc de genèse
+      const isGenesis = block.index === 0;
+      
+      // Structure HTML identique à la fonction addBlockToVisualizer
+      // (La même structure que dans la fonction addBlockToVisualizer)
+      
+      // Calculer le nombre de transactions
+      const txCount = block.transactions ? block.transactions.length : 0;
+      
+      // Trouver la transaction coinbase et calculer la récompense
+      let reward = 0;
+      if (block.transactions && block.transactions.length > 0) {
+        // Chercher la transaction coinbase (première transaction ou marquée coinbase)
+        const coinbaseTx = block.transactions.find(tx => 
+          tx.coinbase === true || tx.from === 'COINBASE' || 
+          // Aussi vérifier la première transaction si aucune n'est explicitement marquée
+          (tx === block.transactions[0] && (tx.from === 'COINBASE' || tx.from === 'Récompense'))
+        );
+        
+        if (coinbaseTx) {
+          reward = parseFloat(coinbaseTx.amount || "0");
+          if (!isGenesis && (reward === 0 || isNaN(reward)) && block.index > 0) {
+            reward = 50;
+          }
+        } else if (!isGenesis && block.index > 0) {
+          reward = 50;
+        }
+      }
+      
+      // Badge pour le nombre de transactions
+      if (txCount > 0) {
+        blockElement.innerHTML += `<div class="block-badge">${txCount}</div>`;
+      }
+      
+      // Ligne connectant au bloc précédent (sauf pour genesis)
+      if (!isGenesis) {
+        blockElement.innerHTML += `<div class="block-connect"></div>`;
+      }
+      
+      // En-tête du bloc avec informations essentielles
+      blockElement.innerHTML += `
+        <div class="block-header">
+          <div class="block-title">
+            <div class="block-index">Bloc #${block.index}</div>
+            <div class="block-timestamp">${new Date(block.timestamp).toLocaleDateString()} ${new Date(block.timestamp).toLocaleTimeString()}</div>
+          </div>
+          
+          <div class="hash-container">
+            <span class="hash-label">Hash</span>
+            <div class="hash-preview">${block.hash.substring(0, 20)}...</div>
+          </div>
+        </div>
+        
+        <div class="block-summary">
+          <div class="summary-item">
+            <div class="summary-value">${txCount}</div>
+            <div class="summary-label">Transactions</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-value">${reward} €</div>
+            <div class="summary-label">Récompense</div>
+          </div>
+        </div>
+        
+        <div class="expand-indicator">Cliquez pour voir les détails</div>
+          
+          <div class="block-content">
+            <div class="hash-container">
+              <span class="hash-label">Hash complet</span>
+              <div class="hash-value">${block.hash}</div>
+            </div>
+            
+            <div class="hash-container">
+              <span class="hash-label">Hash précédent</span>
+              <div class="hash-value prev-hash-value" onclick="event.stopPropagation(); highlightBlock('${block.previousHash}')">${block.previousHash}</div>
+            </div>
+            
+            <div class="hash-container">
+              <span class="hash-label">Nonce</span>
+              <div class="hash-value">${block.nonce || 0}</div>
+            </div>
+            
+            <div class="transactions-label">Transactions (${txCount})</div>
+            <div class="transactions-list">
+          `;
+          
+          // Ajouter les transactions
+          if (block.transactions && block.transactions.length > 0) {
+            block.transactions.forEach(tx => {
+              const isCoinbase = tx.coinbase || tx.from === "COINBASE";
+              
+              blockElement.querySelector('.transactions-list').innerHTML += `
+                <div class="transaction ${isCoinbase ? 'coinbase' : ''}">
+                  ${isCoinbase ? 
+                    `<div class="transaction-details">
+                      <span>Récompense de minage</span>
+                      <span>${tx.amount} €</span>
+                    </div>
+                    <div>→ ${formatAddress(tx.to)}</div>` : 
+                    `<div class="transaction-details">
+                      <span>Transfert</span>
+                      <span>${tx.amount} € + ${tx.fee || '0'} € frais</span>
+                    </div>
+                    <div>${formatAddress(tx.from)} → ${formatAddress(tx.to)}</div>`
+                  }
+                </div>
+              `;
+            });
+          } else {
+            blockElement.querySelector('.transactions-list').innerHTML = `<p>Aucune transaction dans ce bloc</p>`;
+          }
+          
+          // Ajouter le Merkle Root dans la section détails du bloc
+          blockElement.querySelector('.block-content').innerHTML += `
+            <div class="hash-container">
+              <span class="hash-label">Merkle Root</span>
+              <div class="hash-value">${block.merkleRoot || "Non disponible"}</div>
+            </div>
+          `;
+          
+          blockElement.innerHTML += `</div>`;
+          
+          // Ajouter l'événement de clic pour étendre/réduire
+          blockElement.addEventListener('click', function() {
+            toggleBlockDetails(this);
+          });
+          
+          // Ajouter le bloc au début du conteneur
+          if (blockchainContainer.firstChild) {
+            blockchainContainer.insertBefore(blockElement, blockchainContainer.firstChild);
+          } else {
+            blockchainContainer.appendChild(blockElement);
+          }
+          
+          // Faire défiler vers le nouveau bloc avec une animation fluide
+          blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          return blockElement;
+        }
+        
+        // Fonction pour sauvegarder le bloc dans localStorage
+        function saveBlockLocally(block) {
+          try {
+            const blockchainData = localStorage.getItem('blockchain');
+            let blockchain = blockchainData ? JSON.parse(blockchainData) : [];
+            
+            // Vérifier si le bloc existe déjà
+            const blockExists = blockchain.some(existingBlock => existingBlock.hash === block.hash);
+            
+            if (!blockExists) {
+              // Assurer que l'index est correct
+              block.index = blockchain.length;
+              
+              // Ajouter le bloc
+              blockchain.push(block);
+              localStorage.setItem('blockchain', JSON.stringify(blockchain));
+              console.log(`Bloc #${block.index} sauvegardé dans localStorage`);
+            }
+          } catch (error) {
+            console.error("Erreur lors de la sauvegarde du bloc:", error);
+          }
+        }
+        
+        // Fonction pour afficher une notification pour le nouveau bloc
+        function showBlockNotification(block) {
+          // Créer l'élément de notification
+          let notification = document.getElementById('block-notification');
+          if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'block-notification';
+            notification.className = 'toast-notification';
+            
+            notification.innerHTML = `
+              <div class="toast-icon">🧱</div>
+              <div class="toast-content">
+                <div class="toast-title">Nouveau bloc reçu</div>
+                <div class="toast-message" id="toast-message"></div>
+              </div>
+            `;
+            
+            document.body.appendChild(notification);
+          }
+          
+          // Mettre à jour le contenu
+          const messageEl = document.getElementById('toast-message');
+          if (messageEl) {
+            messageEl.textContent = `Bloc #${block.index} avec ${block.transactions?.length || 0} transactions vient d'être ajouté à la blockchain`;
+          }
+          
+          // Afficher la notification
+          notification.classList.add('show');
+          
+          // Cacher la notification après 5 secondes
+          setTimeout(() => {
+            notification.classList.remove('show');
+          }, 5000);
+        }
+        
+        // Modifier la fonction setupAutoRefresh pour être plus efficace
+        function setupAutoRefresh() {
+          // Vérification périodique de la connexion avec le serveur
+          setInterval(() => {
+            if (connected) {
+              // Heartbeat pour vérifier la latence et maintenir la connexion
+              socket.emit('heartbeat', (response) => {
+                const latency = new Date() - new Date(response.serverTime);
+                console.log(`Connexion au serveur: OK (latence ${latency}ms)`);
+              });
+            }
+          }, 30000); // Toutes les 30 secondes
+          
+          // Vérification locale des blocs dans localStorage moins fréquente
+          setInterval(() => {
+            try {
+              const blockchainData = localStorage.getItem('blockchain');
+              if (!blockchainData) return;
+              
+              const blockchain = JSON.parse(blockchainData);
+              const displayedBlockCount = document.querySelectorAll('.block').length;
+              
+              // Si le nombre de blocs dans localStorage est différent du nombre affiché,
+              // ajouter uniquement les blocs manquants sans recharger toute la page
+              if (blockchain.length > displayedBlockCount) {
+                console.log(`${blockchain.length - displayedBlockCount} nouveau(x) bloc(s) détecté(s) en stockage local`);
+                
+                // Identifier les blocs manquants
+                const displayedHashes = Array.from(document.querySelectorAll('.block'))
+                  .map(el => el.getAttribute('data-hash'));
+                
+                // Ajouter uniquement les blocs manquants
+                blockchain.forEach(block => {
+                  if (!displayedHashes.includes(block.hash)) {
+                    console.log(`Ajout du bloc local #${block.index} (${block.hash.substring(0, 8)}...)`);
+                    handleRealtimeNewBlock(block, false); // false = pas d'animation
+                  }
+                });
+                
+                // Mettre à jour les statistiques
+                updateStats();
+              }
+            } catch (error) {
+              console.error("Erreur lors de la vérification auto-refresh:", error);
+            }
+          }, 5000); // Toutes les 5 secondes
+        }
+
+    // Fonction pour synchroniser manuellement la blockchain avec le réseau
+    function syncBlockchain() {
+      if (!connected || !socket) {
+        showNotification("Impossible de synchroniser: non connecté au serveur");
+        return;
+      }
+      
+      showNotification("Synchronisation avec le réseau en cours...");
+      
+      // Charger la blockchain locale
+      const localBlockchain = JSON.parse(localStorage.getItem('blockchain') || '[]');
+      
+      // Demander la blockchain du serveur
+      socket.emit('requestFullBlockchain', { clientId: socket.id }, function(response) {
+        if (response && Array.isArray(response.blockchain)) {
+          console.log(`Blockchain du serveur reçue: ${response.blockchain.length} blocs`);
+          
+          // Fusionner les blockchains
+          const mergedChain = mergeBlockchains(localBlockchain, response.blockchain);
+          
+          // Sauvegarder la blockchain fusionnée
+          localStorage.setItem('blockchain', JSON.stringify(mergedChain));
+          
+          // Afficher la nouvelle blockchain
+          loadRealBlockchain();
+          
+          showNotification(`Synchronisation terminée, blockchain mise à jour avec ${mergedChain.length} blocs`);
+        } else {
+          showNotification("Échec de la synchronisation: blockchain invalide reçue du serveur");
+        }
+      });
+      
+      // Partager notre blockchain avec le serveur
+      socket.emit('shareMyBlockchain', localBlockchain);
+    }
+    
+    // Fonction pour fusionner deux blockchains (locale et distante)
+    function mergeBlockchains(localChain, remoteChain) {
+      if (!Array.isArray(localChain)) localChain = [];
+      if (!Array.isArray(remoteChain)) remoteChain = [];
+      
+      console.log(`Fusion des blockchains: locale (${localChain.length} blocs) et distante (${remoteChain.length} blocs)`);
+      
+      // Si la chaîne locale est vide, utiliser la chaîne distante
+      if (localChain.length === 0) return remoteChain;
+      
+      // Si la chaîne distante est vide, conserver la chaîne locale
+      if (remoteChain.length === 0) return localChain;
+      
+      // Déterminer quelle chaîne est la plus longue (règle de consensus)
+      if (remoteChain.length > localChain.length) {
+        console.log(`La chaîne distante est plus longue: ${remoteChain.length} > ${localChain.length} blocs`);
+        
+        // Vérifier si la chaîne distante est valide avant de l'adopter
+        if (isValidBlockchain(remoteChain)) {
+          console.log("La chaîne distante est valide, elle remplace notre chaîne locale");
+          return repairBlockchainData(remoteChain); // Assurer la cohérence des index
+        } else {
+          console.log("La chaîne distante est invalide, on conserve notre chaîne locale");
+          return localChain;
+        }
+      } else {
+        // Chercher les nouveaux blocs à intégrer
+        const mergedChain = [...localChain];
+        let newBlocksAdded = 0;
+        
+        remoteChain.forEach(remoteBlock => {
+          // Vérifier si ce bloc existe déjà dans notre chaîne
+          const blockExists = mergedChain.some(localBlock => localBlock.hash === remoteBlock.hash);
+          
+          if (!blockExists) {
+            // Si le bloc n'existe pas mais a un hash précédent valide,
+            // on peut l'ajouter à la chaîne fusionnée
+            const validPrevHash = mergedChain.some(localBlock => localBlock.hash === remoteBlock.previousHash);
+            
+            if (validPrevHash) {
+              console.log(`Ajout du bloc distant #${remoteBlock.index} (hash: ${remoteBlock.hash.substring(0, 8)}...)`);
+              mergedChain.push(remoteBlock);
+              newBlocksAdded++;
+            }
+          }
+        });
+        
+        console.log(`${newBlocksAdded} nouveaux blocs ajoutés à notre chaîne locale`);
+        
+        // Réparer les index après la fusion
+        return repairBlockchainData(mergedChain);
+      }
+    }
+    
+    // Fonction pour vérifier la validité d'une blockchain
+    function isValidBlockchain(chain) {
+      // Une chaîne vide est considérée comme valide
+      if (chain.length === 0) return true;
+      
+      // Vérifier chaque bloc
+      for (let i = 1; i < chain.length; i++) {
+        const currentBlock = chain[i];
+        const previousBlock = chain[i-1];
+        
+        // 1. Vérifier que le previousHash pointe vers le hash du bloc précédent
+        if (currentBlock.previousHash !== previousBlock.hash) {
+          console.log(`Blockchain invalide: le hash précédent du bloc #${i} ne correspond pas au hash du bloc #${i-1}`);
+          return false;
+        }
+        
+        // 2. Vérifier que le hash du bloc est correct (optionnel, plus complexe)
+        // Cette vérification nécessiterait de recalculer le hash
+        
+        // 3. Vérifier la séquence des index (peut être réparé automatiquement)
+        if (currentBlock.index !== i) {
+          console.log(`Avertissement: séquence d'index incorrecte dans la blockchain`);
+          // On ne rejette pas la chaîne pour cette raison car elle peut être réparée
+        }
+      }
+      
+      return true;
+    }
+  </script>
+</body>
+</html>

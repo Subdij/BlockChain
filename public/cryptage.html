@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encryption</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/elliptic/6.5.4/elliptic.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 80px 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: flex-start;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 1.2rem;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #667eea;
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a.active {
+            color: #667eea;
+        }
+
+        .logo {
+            font-weight: 700;
+            color: #2d3748;
+            text-decoration: none;
+            font-size: 1.8rem;
+            transition: all 0.3s ease;
+            margin-right: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding: 0.2rem 1rem;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            min-width: 500px;
+            margin: 0 auto;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+            min-width: 300px; 
+            max-width: 800px;
+            width: 90%; 
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.8rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        input, textarea {
+            min-width: 735px;
+            max-width: 735px;
+            max-height: 100px;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        #output {
+            background-color: #f7fafc;
+            resize: none;
+
+        }
+
+
+
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="./index.html" class="logo">SUBCHAINE</a>
+            <div class="nav-links">
+                <a href="./SHA-256.html">SHA-256 Hash</a>
+                <a href="./cryptage.html" class="active">Encrypt hash</a>
+                <a href="./transaction.html">Transaction</a>
+                <a href="./wallet.html">Wallet</a>
+                <a href="./block.html">Mining</a>
+                <a href="./blockchain-visualizer.html">Visualiser</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Génération ECDSA</h1>
+
+        <div class="input-group">
+            <button onclick="generateKeys()">Générer les clés</button>
+        </div>
+
+        <div class="input-group">
+            <label>Clé Privée:</label>
+            <textarea id="privateKey" readonly></textarea>
+        </div>
+
+        <div class="input-group">
+            <label>Clé Publique:</label>
+            <textarea id="publicKey" readonly></textarea>
+        </div>
+
+        <div class="input-group">
+            <label for="message">Message à signer:</label>
+            <input type="text" id="message" placeholder="Tapez votre message...">
+        </div>
+
+        <div class="input-group">
+            <label>Signature Générée:</label>
+            <textarea id="signature" readonly></textarea>
+        </div>
+
+        <div class="input-group">
+            <label>Validation Signature:</label>
+            <textarea id="verificationResult" readonly class="status-valid"></textarea>
+        </div>
+
+    </div>
+
+    <script>
+        const ec = new elliptic.ec('secp256k1');
+        let keyPair = null;
+
+        function generateKeys() {
+            keyPair = ec.genKeyPair();
+            document.getElementById('privateKey').value = keyPair.getPrivate('hex');
+            document.getElementById('publicKey').value = keyPair.getPublic('hex');
+            verifySignature();
+        }
+
+        // Signature et vérification automatiques
+        document.getElementById('message').addEventListener('input', function() {
+            if (!keyPair) {
+                document.getElementById('signature').value = 'Générez les clés d\'abord !';
+                return;
+            }
+            
+            const message = this.value;
+            if (message) {
+                const signature = keyPair.sign(message);
+                document.getElementById('signature').value = `${signature.r.toString(16)}|${signature.s.toString(16)}`;
+                verifySignature();
+            } else {
+                document.getElementById('signature').value = '';
+                document.getElementById('verificationResult').value = '';
+            }
+        });
+
+        function verifySignature() {
+            const signature = document.getElementById('signature').value;
+            const message = document.getElementById('message').value;
+            const publicKey = document.getElementById('publicKey').value;
+
+            if (!message || !signature || !publicKey) {
+                document.getElementById('verificationResult').value = '';
+                return;
+            }
+
+            try {
+                const [r, s] = signature.split('|');
+                const key = ec.keyFromPublic(publicKey, 'hex');
+                const valid = key.verify(message, { r, s });
+
+                const resultField = document.getElementById('verificationResult');
+                resultField.value = valid ? '✅ Signature valide' : '❌ Signature invalide';
+                resultField.className = valid ? 'status-valid' : 'status-invalid';
+            } catch (e) {
+                document.getElementById('verificationResult').value = '❌ Erreur de format';
+                document.getElementById('verificationResult').className = 'status-invalid';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Simulator - Accueil</title>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: flex-start;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 1.2rem;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #667eea;
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a.active {
+            color: #667eea;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 5%;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+        }
+
+        h2 {
+            color: #4a5568;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .presentation {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .presentation h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .presentation p {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+
+            text-decoration: none;
+            height: 100%;
+        }
+
+
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            color: white;
+            font-size: 1.8rem;
+        }
+
+        .card h4 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .card p {
+            color: #718096;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .key-points {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .key-point {
+            flex: 0 0 48%;
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .key-point h4 {
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .key-point p {
+            color: #718096;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 1024px) {
+            .cards-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .cards-container {
+                grid-template-columns: 1fr;
+            }
+            .key-point {
+                flex: 0 0 100%;
+            }
+            .nav-links {
+                gap: 1rem;
+            }
+            .nav-links a {
+                font-size: 1rem;
+            }
+        }
+
+        .section-title {
+            color: #000000;
+            margin: 1.5rem 0;
+            font-size: 1.8rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .section-divider {
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.5), transparent);
+            margin: 2rem 0;
+        }
+
+        .cards-section {
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .cards-container.four-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @media (max-width: 1024px) {
+            .cards-container.four-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .cards-container, 
+            .cards-container.four-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .logo {
+            font-weight: 700;
+            color: #2d3748;
+            text-decoration: none;
+            font-size: 1.8rem;
+            transition: all 0.3s ease;
+            margin-right: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            padding: 0.2rem 1rem;
+        }
+        
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .featured-card {
+            grid-column: span 2;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 242, 255, 0.95) 100%);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            display: flex;
+            flex-direction: row;
+            padding: 2rem;
+            gap: 2rem;
+            align-items: center;
+            height: auto;
+            min-height: 250px;
+        }
+        
+        .featured-content {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .featured-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+        
+        .featured-title {
+            font-size: 1.8rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+        
+        .featured-description {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .cta-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 14px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-subtitle {
+            color: #718096;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        
+        @media (max-width: 1024px) {
+            .featured-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .featured-content {
+                text-align: center;
+            }
+        }
+
+        .cards-container.top-row {
+            margin-bottom: 1.5rem;
+        }
+        
+        .cards-container.bottom-row {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .mining-card {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 0;
+            margin-top: 2rem;
+            width: 100%;
+            box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative;
+            z-index: 100;
+            
+            margin-left: 0;
+            margin-right: 0;
+            margin-bottom: 0;
+        }
+        
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 20px;
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .footer-links a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .footer-links a:hover {
+            color: #667eea;
+        }
+        
+        .footer-copyright {
+            color: #718096;
+            font-size: 0.8rem;
+        }
+        
+        @media (max-width: 768px) {
+            .footer-links {
+                gap: 1rem;
+            }
+        }
+
+        
+        .live-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(49, 130, 206, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .live-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .notification-icon {
+            font-size: 24px;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .notification-message {
+            font-size: 0.9rem;
+        }
+        
+        #connection-status {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+          <a href="./index.html" class="logo">SUBCHAIN</a>
+          <div class="nav-links">
+            <a href="./SHA-256.html">SHA-256 Hash</a>
+            <a href="./cryptage.html">Encrypt hash</a>
+            <a href="./transaction.html">Transaction</a>
+            <a href="./wallet.html">Wallet</a>
+            <a href="./block.html">Mining</a>
+            <a href="./blockchain-visualizer.html">Visualiser</a>
+          </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Simulateur de Blockchain</h1>
+            <h2>Découvrez et interagissez avec la technologie blockchain</h2>
+        </div>
+
+        
+        <div class="cards-section">
+            <h3 class="section-title">Explorer la Blockchain</h3>
+            <div class="cards-container">
+                <div class="card featured-card">
+                    <div class="featured-icon">📊</div>
+                    <div class="featured-content">
+                        <h3 class="featured-title">Visualiseur de Blockchain</h3>
+                        <p class="featured-description">Plongez dans le monde secret des blocs comme un détective numérique ! 🕵️‍♂️ Observez en direct la danse des transactions, découvrez comment les blocs se tiennent par la main pour former une chaîne indestructible, et devenez le Sherlock Holmes de la blockchain ! C'est comme un aquarium géant où les données cryptographiques nagent sous vos yeux ébahis !</p>
+                        <a href="./blockchain-visualizer.html" class="cta-button">Explorer la blockchain maintenant</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <div class="cards-section secondary-section">
+            <h3 class="section-title">Opérations Blockchain</h3>
+            <div class="cards-container top-row">  
+                <a href="./wallet.html" class="card">
+                    <div class="card-icon"><img width="40" height="40" src="https://img.icons8.com/color/40/wallet--v1.png" alt="wallet--v1"/></div>
+                    <h4>Gestionnaire de Wallet</h4>
+                    <p>Créez et gérez vos wallets blockchain avec leurs clés publiques et privées. Suivez vos soldes et historiques de transactions.</p>
+                </a>
+                
+                <a href="./transaction.html" class="card">
+                    <div class="card-icon">💸</div>
+                    <h4>Transactions</h4>
+                    <p>Créez et signez des transactions entre wallets, qui seront ajoutées au mempool en attente d'être minées dans un bloc.</p>
+                </a>
+            </div>
+            
+            <div class="cards-container bottom-row">
+                <a href="./block.html" class="card mining-card">
+                    <div class="card-icon">⛏️</div>
+                    <h4>Minage de Blocs</h4>
+                    <p>Expérimentez le processus de minage en résolvant des problèmes cryptographiques pour valider les transactions et gagner des récompenses.</p>
+                </a>
+            </div>
+        </div>
+
+        
+        <div class="cards-section">
+            <h3 class="section-title">Applications Cryptographiques</h3>
+            <div class="cards-container">
+                <a href="./SHA-256.html" class="card">
+                    <div class="card-icon">#</div>
+                    <h4>Hash SHA-256</h4>
+                    <p>Expérimentez avec la fonction de hachage SHA-256, la base de la sécurité blockchain. Découvrez comment les petits changements dans les données produisent des résultats complètement différents.</p>
+                </a>
+                
+                <a href="./cryptage.html" class="card">
+                    <div class="card-icon">🔐</div>
+                    <h4>Cryptage ECDSA</h4>
+                    <p>Générez des paires de clés cryptographiques utilisées pour sécuriser les transactions blockchain et comprendre les principes de cryptographie à clé publique.</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-links">
+                <a href="./index.html">Accueil</a>
+                <a href="./SHA-256.html">SHA-256</a>
+                <a href="./cryptage.html">Cryptage</a>
+                <a href="./transaction.html">Transactions</a>
+                <a href="./wallet.html">Wallet</a>
+                <a href="./block.html">Minage</a>
+                <a href="./blockchain-visualizer.html">Visualiseur</a>
+            </div>
+            <div class="footer-copyright">
+                © 2023 SubChain - Simulateur de Blockchain - Tous droits réservés
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Animation simple pour les cartes
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.querySelector('.card-icon').style.transform = 'scale(1.1) rotate(5deg)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.querySelector('.card-icon').style.transform = 'scale(1) rotate(0)';
+            });
+        });
+
+        // Correction du lien actif dans la navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname.split('/').pop();
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                if (link.getAttribute('href') === './' + currentPage) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+            
+            // Si nous sommes sur la page d'index, marquer le lien d'index comme actif
+            if (currentPage === '' || currentPage === 'index.html') {
+                document.querySelectorAll('.nav-links a').forEach(link => {
+                    link.classList.remove('active');
+                });
+                document.querySelector('.nav-links a[href="./index.html"]').classList.add('active');
+            }
+            
+            // Initialiser Socket.io pour les notifications en temps réel
+            initSocketConnection();
+        });
+        
+        // Gestion de Socket.io pour notifications en temps réel
+        let socket;
+        let connected = false;
+        
+        function initSocketConnection() {
+            try {
+                console.log("Initialisation de la connexion Socket.io...");
+                
+                // Création d'une nouvelle connexion avec options optimisées
+                socket = io({
+                    reconnectionAttempts: 5,
+                    reconnectionDelay: 1000,
+                    timeout: 10000,
+                    transports: ['websocket', 'polling'] // Utiliser WebSocket en priorité, puis polling si nécessaire
+                });
+                
+                // Gestion des événements de connexion
+                socket.on('connect', () => {
+                    console.log(`Connecté au serveur Socket.IO (ID: ${socket.id})`);
+                    connected = true;
+                    showConnectionStatus(true);
+                    
+                    // Écouter les nouveaux blocs
+                    socket.on('blockBroadcast', (newBlock) => {
+                        console.log("Nouveau bloc reçu:", newBlock);
+                        showNotification('Nouveau bloc', `Bloc #${newBlock.index} avec ${newBlock.transactions?.length || 0} transactions vient d'être miné!`);
+                    });
+                    
+                    // Écouter les nouvelles transactions
+                    socket.on('transactionBroadcast', (tx) => {
+                        console.log("Nouvelle transaction reçue:", tx);
+                        showNotification('Nouvelle transaction', `Transaction de ${tx.amount}€ ajoutée au mempool`);
+                    });
+                });
+                
+                // Gestion des événements de déconnexion
+                socket.on('disconnect', (reason) => {
+                    console.log(`Déconnecté du serveur Socket.IO (Raison: ${reason})`);
+                    connected = false;
+                    showConnectionStatus(false, reason);
+                });
+                
+                // Gestion des tentatives de reconnexion
+                socket.on('reconnecting', (attemptNumber) => {
+                    console.log(`Tentative de reconnexion #${attemptNumber}...`);
+                    showConnectionStatus(false, 'reconnecting', attemptNumber);
+                });
+                
+                // Gestion des erreurs
+                socket.on('error', (error) => {
+                    console.error('Erreur Socket.IO:', error);
+                    showConnectionStatus(false, 'error');
+                });
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation de Socket.io:", error);
+            }
+        }
+        
+        // Fonction pour afficher l'état de connexion
+        function showConnectionStatus(isConnected, reason = '', attempt = 0) {
+            // Créer ou récupérer l'élément de statut
+            let statusIndicator = document.getElementById('connection-status');
+            if (!statusIndicator) {
+                statusIndicator = document.createElement('div');
+                statusIndicator.id = 'connection-status';
+                document.body.appendChild(statusIndicator);
+            }
+            
+            if (isConnected) {
+                statusIndicator.textContent = 'Serveur: Connecté';
+                statusIndicator.style.background = '#c6f6d5'; // Vert clair
+                statusIndicator.style.color = '#22543d'; // Vert foncé
+                
+                // Masquer après 3 secondes
+                setTimeout(() => {
+                    statusIndicator.style.opacity = '0';
+                    setTimeout(() => {
+                        if (statusIndicator.parentNode) {
+                            statusIndicator.parentNode.removeChild(statusIndicator);
+                        }
+                    }, 500);
+                }, 3000);
+            } else if (reason === 'reconnecting') {
+                statusIndicator.textContent = `Serveur: Reconnexion... (${attempt}/5)`;
+                statusIndicator.style.background = '#feebc8'; // Jaune clair
+                statusIndicator.style.color = '#7b341e'; // Orange foncé
+                statusIndicator.style.opacity = '1';
+            } else {
+                statusIndicator.textContent = 'Serveur: Déconnecté';
+                statusIndicator.style.background = '#fed7d7'; // Rouge clair
+                statusIndicator.style.color = '#822727'; // Rouge foncé
+                statusIndicator.style.opacity = '1';
+            }
+        }
+        
+        // Fonction pour afficher une notification
+        function showNotification(title, message) {
+            // Créer l'élément de notification s'il n'existe pas déjà
+            let notification = document.getElementById('live-notification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'live-notification';
+                notification.className = 'live-notification';
+                
+                notification.innerHTML = `
+                    <div class="notification-icon">🔔</div>
+                    <div class="notification-content">
+                        <div class="notification-title" id="notification-title"></div>
+                        <div class="notification-message" id="notification-message"></div>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+            }
+            
+            // Mettre à jour le contenu
+            document.getElementById('notification-title').textContent = title;
+            document.getElementById('notification-message').textContent = message;
+            
+            // Afficher la notification
+            notification.classList.add('show');
+            
+            // Cacher la notification après 5 secondes
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

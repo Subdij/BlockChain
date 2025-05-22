@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blockchain Mining Simulator</title>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/elliptic/6.5.4/elliptic.min.js"></script>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 80px 20px 20px;
+      display: flex;
+      justify-content: center;
+      position: relative;
+    }
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: flex-start;
+      justify-content: center;
+      align-items: center;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .nav-links a {
+      color: #4a5568;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+      font-size: 1.2rem;
+    }
+    .nav-links a::after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #667eea;
+      transition: width 0.3s ease;
+    }
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+    .nav-links a.active {
+      color: #667eea;
+    }
+    #wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+      position: relative;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 1.5rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      position: relative;
+    }
+    h1, h2, h3 {
+      color: #2d3748;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      padding: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+      margin-top: 1.5rem;
+      display: flex;
+      align-items: center;
+    }
+    h2::before {
+      content: "⛏️";
+      margin-right: 10px;
+      font-size: 1.4rem;
+    }
+    h2.transactions::before {
+      content: "💼";
+    }
+    h2.details::before {
+      content: "📊";
+    }
+    h3 {
+      font-size: 1.2rem;
+      margin-top: 1rem;
+      color: #4a5568;
+    }
+    p {
+      margin-bottom: 1rem;
+      line-height: 1.6;
+      color: #4a5568;
+    }
+    .info-box {
+      background-color: #ebf8ff;
+      border-left: 4px solid #4299e1;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    .warning-box {
+      background-color: #fffaf0;
+      border-left: 4px solid #ed8936;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    .success-box {
+      background-color: #f0fff4;
+      border-left: 4px solid #48bb78;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+      position: relative;
+    }
+    .dashboard-panel {
+
+      position: relative;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      padding: 1.2rem;
+      position: relative;
+      overflow: auto;
+      height: 460px;
+      margin-top: 21px;
+    }
+
+    .card2 {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      padding: 1.2rem;
+      position: relative;
+      overflow: auto;
+      height: 395px;
+      margin-top: 21px;
+    }
+
+    .card3 {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      padding: 1.2rem;
+      position: relative;
+      overflow: auto;
+      height: 412px;
+      margin-top: 21px;
+  }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 15px;
+      position: relative;
+    }
+    .card-title {
+      font-weight: 600;
+      color: #4a5568;
+      display: flex;
+      align-items: center;
+    }
+    .card-title i {
+      margin-right: 8px;
+      color: #667eea;
+    }
+    .stats-widget {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #f6f9fc 0%, #f1f5f9 100%);
+      border-radius: 10px;
+      padding: 15px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
+    }
+    .stat-card::after {
+      content: "";
+      position: relative;
+      bottom: -15px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      display: block;
+      margin-top: 10px;
+    }
+    .stat-title {
+      font-size: 0.85rem;
+      color: #718096;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+    .stat-unit {
+      font-size: 0.8rem;
+      color: #718096;
+      margin-top: 2px;
+    }
+    .wallet-selector {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      background: #f7fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 10px center;
+      background-size: 20px;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: all 0.3s ease;
+    }
+    .wallet-selector:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+    }
+    .wallet-card {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-left: 4px solid #667eea;
+    }
+    .wallet-balance {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #2d3748;
+      margin: 10px 0;
+      display: flex;
+    justify-content: center;
+    }
+    .wallet-address {
+      font-family: monospace;
+      background: #edf2f7;
+      padding: 8px;
+      border-radius: 5px;
+      font-size: 0.85rem;
+      color: #4a5568;
+      overflow: auto;
+      white-space: nowrap;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+      width: 100%;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    button::after {
+      display: none;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    @keyframes buttonGlow {
+      0% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+    button:active {
+      opacity: 0.8;
+    }
+    button.mining-btn {
+      background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+      font-size: 1.2rem;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button.mining-btn::before {
+      content: "⛏️";
+      margin-right: 8px;
+      font-size: 1.4rem;
+    }
+    button.get-tx-btn {
+      background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+      font-size: 1rem;
+    }
+    button.get-tx-btn::before {
+      content: "₿";
+      margin-right: 8px;
+      font-weight: bold;
+    }
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .mining-animation {
+      width: 100%;
+      height: 20px;
+      background-color: #edf2f7;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 1rem 0;
+      position: relative;
+    }
+    .mining-animation::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(237, 242, 247, 0.5),
+        rgba(237, 242, 247, 0.5) 10px,
+        rgba(226, 232, 240, 0.5) 10px,
+        rgba(226, 232, 240, 0.5) 20px
+      );
+      border-radius: 10px;
+    }
+    .mining-progress {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      background-size: 200% 100%;
+      border-radius: 10px;
+      transition: width 0.3s ease;
+      position: relative;
+      z-index: 1;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    .mining-details {
+      background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 15px 0;
+      color: #e2e8f0;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      position: relative;
+    }
+    .mining-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+      position: relative;
+    }
+    .mining-stat {
+      display: flex;
+      flex-direction: column;
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 12px;
+      border-radius: 8px;
+      position: relative;
+      overflow: auto;
+    }
+    .hash-visualization {
+      background-color: rgba(26, 32, 44, 0.8);
+      border-radius: 8px;
+      padding: 15px;
+      font-family: monospace;
+      margin-top: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+    .target-zeros {
+      color: #68d391;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    .current-hash {
+      letter-spacing: 1px;
+      font-size: 1rem;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 5px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .current-hash .match {
+      color: #68d391;
+      font-weight: bold;
+    }
+    .current-hash .nomatch {
+      color: #fc8181;
+    }
+    @keyframes hashChange {
+      0% { opacity: 0.3; }
+      50% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+    .current-hash.animating {
+      animation: hashChange 0.3s ease;
+    }
+    .mining-log-container {
+      margin-top: 20px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .mining-log-header {
+      background: #2d3748;
+      color: white;
+      padding: 12px 20px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .mining-log-header .title {
+      display: flex;
+      align-items: center;
+    }
+    .mining-log-header .title::before {
+      content: "📋";
+      margin-right: 8px;
+    }
+    .mining-log {
+      background-color: #1a202c;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 0 0 8px 8px;
+      font-family: 'Consolas', monospace;
+      height: 350px; 
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
+    }
+    .mining-log p {
+      margin: 0;
+      padding: 4px 0;
+      color: #e2e8f0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .mining-log .success {
+      color: #68d391;
+    }
+    .mining-log .error {
+      color: #fc8181;
+    }
+    .mining-log .info {
+      color: #63b3ed;
+    }
+    .block-info {
+      background-color: #2a2f38;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      font-family: 'Consolas', monospace;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .block-info::before {
+      content: "📦";
+      position: absolute;
+      top: -12px;
+      left: 15px;
+      background: #2a2f38;
+      padding: 0 10px;
+      border-radius: 4px;
+      font-size: 1.2rem;
+    }
+    .block-info-header {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+    .block-info-title {
+      font-weight: bold;
+      color: #38b2ac;
+      font-size: 1.1rem;
+    }
+    .block-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .block-info-label {
+      color: #a0aec0;
+    }
+    .block-info-value {
+      max-width: 60%;
+      word-break: break-all;
+      text-align: right;
+      color: #fff;
+    }
+    .block-info-txs {
+      margin-top: 12px;
+    }
+    .block-info-tx-title {
+      color: #4fd1c5;
+      margin-bottom: 10px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+    }
+    .block-info-tx-title::before {
+      content: "💸";
+      margin-right: 6px;
+    }
+    .block-info-tx-row {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px;
+      margin: 8px 0;
+      font-size: 0.9rem;
+      position: relative;
+    }
+    #blockPreview {
+      display: none;
+    }
+    .logo {
+      font-weight: 700;
+      color: #2d3748;
+      text-decoration: none;
+      font-size: 1.8rem;
+      transition: color 0.3s ease;
+      margin-right: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      padding: 0.2rem 1rem;
+      position: relative;
+    }
+    .logo:hover {
+      opacity: 0.9;
+    }
+    @media (max-width: 768px) {
+      .grid-container {
+        grid-template-columns: 1fr;
+      }
+      .mining-stats {
+        grid-template-columns: 1fr 1fr;
+      }
+      .stats-widget {
+        grid-template-columns: 1fr 1fr;
+      }
+      body {
+        padding: 70px 10px 10px;
+      }
+      .container {
+        padding: 1rem;
+      }
+      .nav-links {
+        gap: 1rem;
+      }
+      .logo {
+        font-size: 1.5rem;
+        margin-right: 1rem;
+      }
+      
+      .card {
+        height: 550px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .card {
+        height: auto; 
+        min-height: 450px; 
+        max-height: 600px; 
+      }
+    }
+
+    
+    .full-width-card {
+      width: 100%;
+      margin-top: 20px;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-container">
+      <a href="./index.html" class="logo">SUBCHAINE</a>
+      <div class="nav-links">
+        <a href="./SHA-256.html">SHA-256 Hash</a>
+        <a href="./cryptage.html">Encrypt hash</a>
+        <a href="./transaction.html">Transaction</a>
+        <a href="./wallet.html">Wallet</a>
+        <a href="./block.html" class="active">Mining</a>
+        <a href="./blockchain-visualizer.html">Visualiser</a>
+      </div>
+    </div>
+  </nav>
+
+  <div id="wrapper">
+    <div class="container">
+      <h1>Blockchain Mining Simulator</h1>
+      
+      <div class="grid-container">
+        <div class="dashboard-panel">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i>👛</i>Wallet de Mineur</div>
+            </div>
+            
+            <label for="walletSelector">Sélectionnez votre wallet de mineur :</label>
+            <select id="walletSelector" class="wallet-selector">
+              <option value="">-- Choisir un wallet --</option>
+            </select>
+            
+            <div id="walletInfo" class="wallet-card" style="display: none;">
+              <div class="stat-title">Solde actuel</div>
+              <div class="wallet-balance" id="currentBalance">0 €</div>
+              <div class="stat-title">Adresse publique</div>
+              <div class="wallet-address" id="walletAddress">-</div>
+            </div>
+            
+            <div class="btn-group">
+              <button id="startMiningBtn" class="mining-btn" style="grid-column: 1 / span 2;">Commencer le minage</button>
+            </div>
+          </div>
+          
+          <div class="card2">
+            <div class="card-header">
+              <div class="card-title"><i>📊</i>Statistiques du Réseau</div>
+            </div>
+            
+            <div class="stats-widget">
+              <div class="stat-card">
+                <div class="stat-title">Difficulté</div>
+                <div class="stat-value" id="currentDifficulty">3</div>
+                <div class="stat-unit">zéros requis</div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-title">Récompense</div>
+                <div class="stat-value" id="baseReward">25</div>
+                <div class="stat-unit">€ par bloc</div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-title">Transactions</div>
+                <div class="stat-value" id="pendingTx">0</div>
+                <div class="stat-unit">en attente</div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-title">Blocs</div>
+                <div class="stat-value" id="blockCount">0</div>
+                <div class="stat-unit">minés</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="dashboard-panel">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i>📦</i>Prochain Bloc à Miner</div>
+            </div>
+            <div id="blockPreviewContainer">
+              <div id="blockPreview"></div>
+            </div>
+          </div>
+          
+          <div class="mining-log-container">
+            <div class="mining-log-header">
+              <div class="title">Journal du Minage</div>
+              <span id="logEntryCount">0 entrées</span>
+            </div>
+            
+            <div class="mining-log" id="miningLog">
+              <p class="info">Système prêt. Sélectionnez un wallet et commencez le minage...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      
+      <div class="full-width-card">
+        <div class="card3">
+          <div class="card-header">
+            <div class="card-title"><i>⛏️</i>Progression du Minage</div>
+          </div>
+          
+          <div class="mining-animation">
+            <div class="mining-progress" id="miningProgress"></div>
+          </div>
+          
+          <div class="mining-details" id="miningDetails" style="display: none;">
+            <div class="mining-stats">
+              <div class="mining-stat">
+                <span class="label">Hash actuel:</span>
+                <span class="value" id="currentHashDisplay">-</span>
+              </div>
+              <div class="mining-stat">
+                <span class="label">Nonce testé:</span>
+                <span class="value" id="currentNonceDisplay">0</span>
+              </div>
+              <div class="mining-stat">
+                <span class="label">Temps écoulé:</span>
+                <span class="value" id="elapsedTimeDisplay">00:00:00</span>
+              </div>
+              <div class="mining-stat">
+                <span class="label">Tentatives/sec:</span>
+                <span class="value" id="hashRateDisplay">0</span>
+              </div>
+            </div>
+            
+            <div class="hash-visualization">
+              <div class="target-zeros" id="targetZeros">Cible: 000</div>
+              <div class="current-hash" id="currentHashVisualization">-</div>
+            </div>
+            
+            <div id="currentRewardDisplay" style="margin-top: 15px; text-align: center;">
+              <strong>Récompense actuelle:</strong> <span id="currentReward">25.00</span> €
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const ec = new elliptic.ec("secp256k1");
+    const INITIAL_REWARD = 25;
+    const HALVING_INTERVAL = 4;
+    const DIFFICULTY_BONUS_FACTOR = 0.1;
+    const DIFFICULTY = 3;
+    let isMining = false;
+    let currentNonce = 0;
+    let miningInterval;
+    let selectedWalletKeyPair = null;
+    let selectedWalletIndex = null;
+    let availableWallets = [];
+    let mempool = [];
+
+    function getBlockReward(blockIndex, difficulty) {
+      // Récompense spéciale pour le bloc genèse (#0)
+      if (blockIndex === 0) {
+        return 50;
+      }
+      
+      const halvings = Math.floor(blockIndex / HALVING_INTERVAL);
+      // Utilisation de Math.pow(2, halvings) pour diviser par 2 à chaque halving
+      // (plutôt que Math.pow(3, halvings) qui divisait par 3)
+      let baseReward = INITIAL_REWARD / Math.pow(2, halvings);
+      baseReward = Math.max(baseReward, 0.1);
+      const difficultyBonus = difficulty > 3 ? (difficulty - 3) * DIFFICULTY_BONUS_FACTOR * baseReward : 0;
+      return baseReward + difficultyBonus;
+    }
+
+    function loadMempoolFromStorage() {
+      try {
+        // D'abord charger depuis localStorage
+        const storedMempool = localStorage.getItem('blockchainMempool');
+        if (storedMempool) {
+          mempool = JSON.parse(storedMempool);
+          console.log(`Mempool chargé depuis localStorage: ${mempool.length} transactions`);
+        } else {
+          mempool = [];
+        }
+        
+        // Puis synchroniser avec le serveur si connecté
+        if (socket && socket.connected) {
+          socket.emit('requestFullMempool', { clientId: socket.id || 'unknown' }, function(response) {
+            if (response && response.mempool && Array.isArray(response.mempool)) {
+              console.log(`Mempool reçu du serveur: ${response.mempool.length} transactions`);
+              // Fusion des transactions
+              mergeServerMempool(response.mempool);
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement du mempool:", error);
+        mempool = [];
+      }
+      document.getElementById("pendingTx").textContent = mempool.length;
+      
+      // Mise à jour de l'état du bouton quand le mempool change
+      updateMiningButtonState();
+    }
+
+    // Fonction pour fusionner le mempool local avec celui du serveur
+    function mergeServerMempool(serverMempool) {
+      if (!serverMempool || !Array.isArray(serverMempool)) return;
+      
+      let newTransactionsAdded = 0;
+      
+      // Pour chaque transaction du serveur
+      serverMempool.forEach(serverTx => {
+        // Vérifier si elle existe déjà dans notre mempool local
+        const exists = mempool.some(localTx => 
+          localTx.signature === serverTx.signature || 
+          (localTx.from === serverTx.from && 
+           localTx.to === serverTx.to && 
+           localTx.amount === serverTx.amount &&
+           localTx.fee === serverTx.fee)
+        );
+        
+        // Si elle n'existe pas, l'ajouter
+        if (!exists && serverTx.signature) {
+          mempool.push(serverTx);
+          newTransactionsAdded++;
+        }
+      });
+      
+      if (newTransactionsAdded > 0) {
+        console.log(`${newTransactionsAdded} nouvelles transactions ajoutées depuis le serveur`);
+        saveMempoolToStorage();
+        document.getElementById("pendingTx").textContent = mempool.length;
+        
+        // Mise à jour de l'état du bouton quand le mempool change
+        updateMiningButtonState();
+      }
+    }
+
+    function saveMempoolToStorage() {
+      try {
+        localStorage.setItem('blockchainMempool', JSON.stringify(mempool));
+        console.log(`Mempool sauvegardé dans localStorage: ${mempool.length} transactions`);
+        
+        // Partager le mempool avec le serveur si connecté
+        if (socket && socket.connected && mempool.length > 0) {
+          socket.emit('shareMyMempool', mempool);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde du mempool:", error);
+      }
+    }
+
+    class Block {
+      constructor(index, previousHash, transactions = []) {
+        this.index = index;
+        this.timestamp = new Date().toISOString();
+        this.transactions = transactions;
+        this.previousHash = previousHash;
+        this.nonce = 0;
+        this.merkleRoot = this.calculateMerkleRoot();
+        this.hash = this.calculateHash();
+      }
+      
+      calculateMerkleRoot() {
+        if (!this.transactions || this.transactions.length === 0) {
+          return "0000000000000000000000000000000000000000000000000000000000000000";
+        }
+        let hashes = this.transactions.map(tx => {
+          const txData = {
+            from: tx.from,
+            to: tx.to,
+            amount: tx.amount,
+            fee: tx.fee || "0",
+            signature: tx.signature || ""
+          };
+          return CryptoJS.SHA256(JSON.stringify(txData)).toString();
+        });
+        while (hashes.length > 1) {
+          const tempHashes = [];
+          for (let i = 0; i < hashes.length; i += 2) {
+            if (i + 1 < hashes.length) {
+              const combinedHash = CryptoJS.SHA256(hashes[i] + hashes[i + 1]).toString();
+              tempHashes.push(combinedHash);
+            } else {
+              const combinedHash = CryptoJS.SHA256(hashes[i] + hashes[i]).toString();
+              tempHashes.push(combinedHash);
+            }
+          }
+          hashes = tempHashes;
+        }
+        return hashes[0];
+      }
+      
+      calculateHash() {
+        return CryptoJS.SHA256(
+          this.index +
+          this.previousHash +
+          this.timestamp +
+          this.merkleRoot +
+          this.nonce
+        ).toString();
+      }
+      
+      mineBlock(difficulty) {
+        while (
+          this.hash.substring(0, difficulty) !==
+          Array(difficulty + 1).join("0")
+        ) {
+          this.nonce++;
+          currentNonce = this.nonce;
+          if (this.nonce % 100 === 0) {
+            updateMiningProgress(this.nonce % 1000 / 10);
+          }
+          this.hash = this.calculateHash();
+        }
+        return this.hash;
+      }
+    }
+    
+    class Blockchain {
+      constructor() {
+        this.chain = [this.createGenesisBlock()];
+        this.difficulty = DIFFICULTY;
+      }
+      
+      createGenesisBlock() {
+        return new Block(0, "0", []);
+      }
+      
+      getLatestBlock() {
+        return this.chain[this.chain.length - 1];
+      }
+      
+      addBlock(newBlock) {
+        newBlock.previousHash = this.getLatestBlock().hash;
+        newBlock.hash = newBlock.mineBlock(this.difficulty);
+        this.chain.push(newBlock);
+      }
+    }
+    
+    const blockchain = new Blockchain();
+    
+    document.addEventListener("DOMContentLoaded", function() {
+      loadWallets();
+      loadMempoolFromStorage();
+      document.getElementById("walletSelector").addEventListener("change", handleWalletSelection);
+      document.getElementById("startMiningBtn").addEventListener("click", toggleMining);
+      
+      // Désactiver le bouton de minage au démarrage si aucun wallet n'est sélectionné
+      const miningBtn = document.getElementById("startMiningBtn");
+      miningBtn.disabled = true;
+      miningBtn.style.opacity = "0.5";
+      miningBtn.title = "Veuillez d'abord sélectionner un wallet";
+      
+      updateBlockCount();
+      updateUI();
+      
+      // Ajouter des écouteurs pour les événements Socket.io liés au mempool
+      setupSocketListeners();
+    });
+
+    function loadWallets() {
+      const storedWallets = JSON.parse(localStorage.getItem('blockchainWallets')) || [];
+      availableWallets = storedWallets;
+      if (availableWallets.length === 0) {
+        addLogMessage("Aucun wallet trouvé. Veuillez d'abord créer un wallet sur la page Wallet.", "error");
+        return;
+      }
+      const walletSelector = document.getElementById('walletSelector');
+      walletSelector.innerHTML = '<option value="">-- Choisir un wallet --</option>';
+      availableWallets.forEach((wallet, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${wallet.username} - Solde: ${wallet.balance}€`;
+        walletSelector.appendChild(option);
+      });
+    }
+    
+    function handleWalletSelection() {
+      const walletSelector = document.getElementById('walletSelector');
+      selectedWalletIndex = walletSelector.value;
+      const walletInfoCard = document.getElementById('walletInfo');
+      const miningBtn = document.getElementById("startMiningBtn");
+      
+      if (selectedWalletIndex === "") {
+        selectedWalletKeyPair = null;
+        document.getElementById("currentBalance").textContent = "0 €";
+        walletInfoCard.style.display = "none";
+        
+        // Désactiver le bouton de minage
+        miningBtn.disabled = true;
+        miningBtn.style.opacity = "0.5";
+        miningBtn.title = "Veuillez d'abord sélectionner un wallet";
+        return;
+      }
+      
+      const selectedWallet = availableWallets[selectedWalletIndex];
+      try {
+        const privateKey = selectedWallet.privateKey;
+        selectedWalletKeyPair = ec.keyFromPrivate(privateKey);
+        document.getElementById("currentBalance").textContent = selectedWallet.balance + " €";
+        const publicKey = selectedWalletKeyPair.getPublic('hex');
+        document.getElementById("walletAddress").textContent = publicKey;
+        walletInfoCard.style.display = "block";
+        addLogMessage(`Wallet sélectionné: ${selectedWallet.username}`, "info");
+        updateBlockPreview(publicKey);
+        
+        // Vérifier s'il y a des transactions dans le mempool avant d'activer le bouton
+        const blockchainData = localStorage.getItem('blockchain');
+        const existingChain = blockchainData ? JSON.parse(blockchainData) : [];
+        const blockIndex = blockchain.chain.length;
+
+        // Cas spécial: bloc genesis pas encore miné (peut être miné sans transactions)
+        if (blockIndex === 0 && existingChain.length === 0) {
+          miningBtn.disabled = false;
+          miningBtn.style.opacity = "1";
+          miningBtn.title = "Commencer le minage du bloc genesis";
+        }
+        // Cas normal: il faut des transactions dans le mempool
+        else if (mempool.length > 0) {
+          miningBtn.disabled = false;
+          miningBtn.style.opacity = "1";
+          miningBtn.title = "Commencer le minage";
+        } 
+        // Pas de transactions dans le mempool
+        else {
+          miningBtn.disabled = true;
+          miningBtn.style.opacity = "0.5";
+          miningBtn.title = "Aucune transaction dans le mempool";
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement de la clé:", error);
+        addLogMessage("Erreur lors du chargement du wallet.", "error");
+        selectedWalletKeyPair = null;
+        walletInfoCard.style.display = "none";
+        
+        // Désactiver le bouton de minage
+        miningBtn.disabled = true;
+        miningBtn.style.opacity = "0.5";
+        miningBtn.title = "Erreur avec le wallet sélectionné";
+      }
+    }
+    
+    function toggleMining() {
+      if (!selectedWalletKeyPair) {
+        addLogMessage("Veuillez d'abord sélectionner un wallet.", "error");
+        return;
+      }
+      if (isMining) {
+        clearInterval(miningInterval);
+        isMining = false;
+        document.getElementById("startMiningBtn").textContent = "Commencer le minage";
+        document.getElementById("startMiningBtn").style.background = "linear-gradient(135deg, #f6ad55 0%, #ed8936 100%)";
+        addLogMessage("Minage arrêté.", "info");
+        updateMiningProgress(0);
+        document.getElementById("miningDetails").style.display = "none";
+      } else {
+        // Vérifie si le bloc genesis a déjà été miné
+        const blockchainData = localStorage.getItem('blockchain');
+        const existingChain = blockchainData ? JSON.parse(blockchainData) : [];
+        const blockIndex = blockchain.chain.length;
+        
+        // Si ce n'est pas le bloc genesis (index 0) et qu'il n'y a pas de transactions
+        if (blockIndex > 0 && mempool.length === 0) {
+          addLogMessage("Impossible de miner: aucune transaction en attente dans le mempool.", "error");
+          return;
+        }
+        
+        // Si le bloc genesis a déjà été miné (existe dans la blockchain locale)
+        if (blockIndex === 0 && existingChain.length > 0) {
+          addLogMessage("Impossible de miner: le bloc genesis a déjà été miné.", "error");
+          return;
+        }
+        
+        isMining = true;
+        document.getElementById("startMiningBtn").textContent = "Arrêter le minage";
+        document.getElementById("startMiningBtn").style.background = "linear-gradient(135deg, #fc8181 0%, #e53e3e 100%)";
+        addLogMessage("Minage démarré...", "info");
+        currentNonce = 0;
+        startMining();
+      }
+    }
+    
+    let miningStartTime = 0;
+    let hashesComputed = 0;
+    let miningStatsInterval;
+    
+    // Nouvelle fonction pour valider strictement une transaction
+    function validateTransaction(tx) {
+      // Ignorer la validation pour la transaction coinbase
+      if (tx.from === "COINBASE" || tx.coinbase === true) {
+        return {
+          valid: true
+        };
+      }
+
+      // 1. Vérifier que tous les champs requis sont présents
+      if (!tx.from || !tx.to || !tx.amount || tx.amount === undefined) {
+        return {
+          valid: false,
+          reason: "Champs obligatoires manquants dans la transaction"
+        };
+      }
+
+      // 2. Vérifier que les montants sont positifs et numériques
+      const amount = parseFloat(tx.amount);
+      const fee = parseFloat(tx.fee || 0);
+      
+      if (isNaN(amount) || amount <= 0) {
+        return {
+          valid: false,
+          reason: "Montant invalide: doit être un nombre positif"
+        };
+      }
+      
+      if (isNaN(fee) || fee < 0) {
+        return {
+          valid: false,
+          reason: "Frais invalides: doit être un nombre positif ou zéro"
+        };
+      }
+
+      // 3. Vérifier la signature de la transaction (si présente)
+      if (tx.signature) {
+        try {
+          const key = ec.keyFromPublic(tx.from, "hex");
+          const txData = JSON.stringify({
+            from: tx.from,
+            to: tx.to,
+            amount: tx.amount,
+            fee: tx.fee || "0"
+          });
+          
+          if (!key.verify(txData, tx.signature)) {
+            return {
+              valid: false,
+              reason: "Signature invalide pour cette transaction"
+            };
+          }
+        } catch (e) {
+          return {
+            valid: false,
+            reason: "Erreur lors de la vérification de la signature: " + e.message
+          };
+        }
+      } else if (!tx.realBitcoinTx) {
+        // Si ce n'est pas une transaction Bitcoin importée, une signature est requise
+        return {
+          valid: false,
+          reason: "Signature manquante pour une transaction normale"
+        };
+      }
+
+      // 4. Vérifier que les adresses sont dans un format valide
+      if (!tx.realBitcoinTx) {
+        if (tx.from.length < 50) {
+          return {
+            valid: false,
+            reason: "Format d'adresse expéditeur invalide"
+          };
+        }
+        
+        if (tx.to.length < 50) {
+          return {
+            valid: false,
+            reason: "Format d'adresse destinataire invalide"
+          };
+        }
+      }
+
+      // Toutes les vérifications sont passées
+      return {
+        valid: true
+      };
+    }
+
+    function startMining() {
+      if (!selectedWalletKeyPair) {
+        addLogMessage("Impossible de miner: aucun wallet sélectionné.", "error");
+        isMining = false;
+        document.getElementById("startMiningBtn").textContent = "Commencer le minage";
+        document.getElementById("startMiningBtn").style.background = "linear-gradient(135deg, #f6ad55 0%, #ed8936 100%)";
+        return;
+      }
+      
+      addLogMessage("Préparation du bloc à miner...", "info");
+      miningStartTime = Date.now();
+      hashesComputed = 0;
+      document.getElementById("miningDetails").style.display = "block";
+      document.getElementById("targetZeros").textContent = `Cible: ${"0".repeat(DIFFICULTY)}`;
+      
+      // Copier tout le mempool
+      const allTransactions = [...mempool];
+      const minerPublicKey = selectedWalletKeyPair.getPublic('hex');
+      const minerAddress = minerPublicKey.substring(0, 20) + "...";
+      addLogMessage(`Adresse du mineur: ${minerAddress}`, "info");
+      
+      // Filtrer les transactions du mineur
+      const excludedTxCount = allTransactions.filter(tx => tx.from === minerPublicKey).length;
+      let transactions = allTransactions.filter(tx => tx.from !== minerPublicKey);
+
+      if (excludedTxCount > 0) {
+        addLogMessage(`${excludedTxCount} transaction(s) du mineur ont été exclues pour éviter les conflits d'intérêts.`, "info");
+      }
+
+      // NOUVEAU: Validation stricte des transactions avant inclusion
+      addLogMessage("Validation des transactions avant inclusion dans le bloc...", "info");
+      const validatedTransactions = [];
+      const invalidTransactions = [];
+      
+      transactions.forEach(tx => {
+        const validation = validateTransaction(tx);
+        if (validation.valid) {
+          validatedTransactions.push(tx);
+        } else {
+          invalidTransactions.push({ tx, reason: validation.reason });
+        }
+      });
+      
+      // Afficher les résultats de la validation
+      if (invalidTransactions.length > 0) {
+        addLogMessage(`${invalidTransactions.length} transaction(s) rejetée(s) suite à la validation stricte:`, "error");
+        invalidTransactions.forEach(({ tx, reason }) => {
+          const txPreview = `${tx.from.substring(0,8)}...→${tx.to.substring(0,8)}... (${tx.amount})`;
+          addLogMessage(`Transaction ${txPreview} rejetée: ${reason}`, "error");
+        });
+      }
+      
+      addLogMessage(`${validatedTransactions.length} transaction(s) valide(s) acceptées pour l'inclusion dans le bloc`, "info");
+      
+      // Utiliser uniquement les transactions validées
+      transactions = validatedTransactions;
+      
+      // Trier les transactions par frais décroissants (priorité aux transactions avec frais élevés)
+      transactions.sort((a, b) => {
+        const feeA = parseFloat(a.fee || 0);
+        const feeB = parseFloat(b.fee || 0);
+        return feeB - feeA; // Ordre décroissant
+      });
+      
+      addLogMessage(`Transactions priorisées par montant des frais pour maximiser la rentabilité.`, "info");
+      
+      // Afficher les transactions prioritaires (top 3)
+      if (transactions.length > 0) {
+        addLogMessage(`Top transactions par frais:`, "info");
+        const topN = Math.min(3, transactions.length);
+        for (let i = 0; i < topN; i++) {
+          const tx = transactions[i];
+          addLogMessage(`- De: ${tx.from.substring(0, 10)}... Frais: ${tx.fee || 0}€`, "info");
+        }
+      }
+      
+      // Calculer les frais sur les transactions incluses seulement
+      let totalFees = 0;
+      transactions.forEach(tx => {
+        totalFees += parseFloat(tx.fee || 0);
+      });
+      
+      const blockIndex = blockchain.chain.length;
+      const currentDifficulty = blockchain.difficulty || DIFFICULTY;
+      const baseReward = getBlockReward(blockIndex, currentDifficulty);
+      const coinbaseReward = baseReward + totalFees;
+      const coinbaseTx = {
+        from: "COINBASE",
+        to: minerPublicKey,
+        amount: coinbaseReward.toString(),
+        fee: "0",
+        coinbase: true
+      };
+      transactions.unshift(coinbaseTx);
+      const index = blockchain.chain.length;
+      const previousHash = blockchain.getLatestBlock().hash;
+      const newBlock = new Block(index, previousHash, transactions);
+      addLogMessage(`Tentative de minage du bloc #${index} avec difficulté ${DIFFICULTY}...`, "info");
+      addLogMessage(`Récompense de base: ${baseReward.toFixed(2)}€ + ${totalFees.toFixed(2)}€ de frais`, "info");
+      miningStatsInterval = setInterval(updateMiningStats, 100);
+      const hashesPerBatch = 500;
+      let successFound = false;
+      miningInterval = setInterval(() => {
+        if (!isMining || successFound) {
+          clearInterval(miningInterval);
+          clearInterval(miningStatsInterval);
+          return;
+        }
+        for (let i = 0; i < hashesPerBatch; i++) {
+          newBlock.nonce = currentNonce++;
+          newBlock.hash = newBlock.calculateHash();
+          hashesComputed++;
+          if (currentNonce % 50 === 0) {
+            updateHashVisualization(newBlock.hash, DIFFICULTY);
+            updateMiningProgress((currentNonce % 2000) / 20);
+          }
+          if (newBlock.hash.substring(0, DIFFICULTY) === Array(DIFFICULTY + 1).join("0")) {
+            successFound = true;
+            document.getElementById("currentNonceDisplay").textContent = currentNonce.toLocaleString();
+            updateHashVisualization(newBlock.hash, DIFFICULTY);
+            updateMiningProgress(100);
+            const timeElapsed = ((Date.now() - miningStartTime) / 1000).toFixed(2);
+            addLogMessage(`Bloc miné avec succès! Hash: ${newBlock.hash}`, "success");
+            addLogMessage(`Nonce trouvé: ${newBlock.nonce.toLocaleString()}`, "info");
+            addLogMessage(`Temps de minage: ${timeElapsed} secondes`, "info");
+            addLogMessage(`Performance: ${Math.round(hashesComputed/timeElapsed).toLocaleString()} hash/s`, "info");
+            addLogMessage(`Récompense obtenue: ${coinbaseReward}€ (${baseReward.toFixed(2)}€ base + ${totalFees}€ frais)`, "success");
+            blockchain.chain.push(newBlock);
+            processMinedTransactions(newBlock);
+            updateMinerWallet(coinbaseReward);
+            mempool = [];
+            saveMempoolToStorage();
+            document.getElementById("startMiningBtn").textContent = "Commencer le minage";
+            document.getElementById("startMiningBtn").style.background = "linear-gradient(135deg, #f6ad55 0%, #ed8936 100%)";
+            isMining = false;
+            clearInterval(miningInterval);
+            clearInterval(miningStatsInterval);
+            updateUI();
+            updateCurrentReward();
+            emitBlock(newBlock);
+            break;
+          }
+        }
+        document.getElementById("currentNonceDisplay").textContent = currentNonce.toLocaleString();
+      }, 200);
+    }
+    
+    function updateMiningStats() {
+      const elapsedTime = Date.now() - miningStartTime;
+      const elapsedSeconds = elapsedTime / 1000;
+      const hashRate = hashesComputed / elapsedSeconds;
+      const hours = Math.floor(elapsedSeconds / 3600);
+      const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+      const seconds = Math.floor(elapsedSeconds % 60);
+      const formattedTime = 
+        (hours > 0 ? hours.toString().padStart(2, '0') + ':' : '') +
+        minutes.toString().padStart(2, '0') + ':' +
+        seconds.toString().padStart(2, '0');
+      document.getElementById("elapsedTimeDisplay").textContent = formattedTime;
+      document.getElementById("hashRateDisplay").textContent = hashRate.toFixed(0);
+    }
+    
+    function updateHashVisualization(hash, difficulty) {
+      const hashDisplay = document.getElementById("currentHashDisplay");
+      const hashVis = document.getElementById("currentHashVisualization");
+      hashDisplay.textContent = hash;
+      let htmlContent = '';
+      for (let i = 0; i < difficulty; i++) {
+        if (hash[i] === '0') {
+          htmlContent += `<span class="match">0</span>`;
+        } else {
+          htmlContent += `<span class="nomatch">${hash[i]}</span>`;
+        }
+      }
+      htmlContent += hash.substring(difficulty);
+      hashVis.innerHTML = htmlContent;
+    }
+    
+    function updateMiningProgress(percentage) {
+      document.getElementById("miningProgress").style.width = `${percentage}%`;
+    }
+    
+    function updateMinerWallet(reward) {
+      if (!selectedWalletKeyPair || selectedWalletIndex === null) return;
+      const minerWallet = availableWallets[selectedWalletIndex];
+      minerWallet.balance = (parseFloat(minerWallet.balance) + parseFloat(reward)).toFixed(2);
+      localStorage.setItem('blockchainWallets', JSON.stringify(availableWallets));
+      document.getElementById("currentBalance").textContent = minerWallet.balance + " €";
+    }
+    
+    function addLogMessage(message, type = "info") {
+      const logElement = document.getElementById("miningLog");
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement("p");
+      logEntry.className = type;
+      if (typeof message === "string" && message.includes("txid:")) {
+        const parts = message.split("txid:");
+        const txid = parts[1].trim();
+        logEntry.innerHTML = `[${timestamp}] ${parts[0]} <a href="https://blockstream.info/tx/${txid}" target="_blank" style="color:#63b3ed;">txid:${txid}</a>`;
+      } else {
+        logEntry.textContent = `[${timestamp}] ${message}`;
+      }
+      logElement.insertBefore(logEntry, logElement.firstChild);
+      const logEntries = logElement.querySelectorAll("p").length;
+      document.getElementById("logEntryCount").textContent = `${logEntries} entrées`;
+      if (logEntries > 100) {
+        logElement.removeChild(logElement.lastChild);
+      }
+    }
+    
+    function updateBlockPreview(minerAddress = "[votre adresse publique]") {
+      // Obtenir l'index correct du prochain bloc depuis la blockchain stockée localement
+      const blockchainData = localStorage.getItem('blockchain');
+      const localBlockchain = blockchainData ? JSON.parse(blockchainData) : [];
+      const nextBlockIndex = localBlockchain.length;
+      
+      const blockIndex = blockchain.chain.length;
+      const currentDifficulty = blockchain.difficulty || DIFFICULTY;
+      const blockReward = getBlockReward(blockIndex, currentDifficulty);
+      document.getElementById("baseReward").textContent = blockReward.toFixed(0);
+      const blockData = {
+        index: nextBlockIndex, // Utiliser l'index correct du prochain bloc
+        timestamp: new Date().toISOString(),
+        previousHash: blockchain.getLatestBlock().hash,
+        nonce: 0,
+        transactions: [
+          {
+            from: "COINBASE",
+            to: minerAddress || "[votre adresse publique]",
+            amount: blockReward.toFixed(2),
+            fee: "0",
+            coinbase: true
+          }
+        ]
+      };
+      if (mempool.length > 0) {
+        blockData.transactions.push(...mempool.map(tx => {
+          if (tx.realBitcoinTx) {
+            return {
+              from: tx.from,
+              to: tx.to,
+              amount: `${tx.amount} ฿`,
+              fee: `${tx.fee} ฿`,
+              txid: tx.txid,
+              realBitcoinTx: true
+            };
+          }
+          return tx;
+        }));
+      }
+      const merkleCalculator = new Block(
+        blockData.index,
+        blockData.previousHash,
+        blockData.transactions
+      );
+      blockData.merkleRoot = merkleCalculator.calculateMerkleRoot();
+      document.getElementById("blockPreview").textContent = JSON.stringify(blockData, null, 2);
+      const previewContainer = document.getElementById("blockPreviewContainer");
+      const oldVisualization = previewContainer.querySelector(".block-info");
+      if (oldVisualization) {
+        oldVisualization.remove();
+      }
+      const blockInfo = document.createElement("div");
+      blockInfo.className = "block-info";
+      blockInfo.innerHTML = `
+        <div class="block-info-header">
+          <span class="block-info-title">Bloc #${blockData.index}</span>
+          <span>${new Date(blockData.timestamp).toLocaleTimeString()}</span>
+        </div>
+        <div class="block-info-row">
+          <span class="block-info-label">Difficulté:</span>
+          <span class="block-info-value">${currentDifficulty} (${Array(currentDifficulty + 1).join("0")}...)</span>
+        </div>
+        <div class="block-info-row">
+          <span class="block-info-label">Hash précédent:</span>
+          <span class="block-info-value">${blockData.previousHash.substring(0, 12)}...</span>
+        </div>
+        <div class="block-info-row">
+          <span class="block-info-label">Merkle Root:</span>
+          <span class="block-info-value">${blockData.merkleRoot.substring(0, 12)}...</span>
+        </div>
+        <div class="block-info-txs">
+          <div class="block-info-tx-title">Transactions (${blockData.transactions.length})</div>
+      `;
+      blockData.transactions.forEach((tx, index) => {
+        const isCoinbase = tx.from === "COINBASE";
+        const txType = isCoinbase ? "Récompense de minage" : (tx.realBitcoinTx ? "Transaction Bitcoin" : "Transaction standard");
+        const amountDisplay = tx.amount.toString();
+        blockInfo.innerHTML += `
+          <div class="block-info-tx-row">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: ${isCoinbase ? '#f6ad55' : '#63b3ed'}">${txType}</span>
+              <span style="color: ${isCoinbase ? '#f6ad55' : '#68d391'}">${amountDisplay}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 0.8rem;">
+              <span style="color: #a0aec0">De: ${tx.from.substring(0, 15)}${tx.from.length > 15 ? '...' : ''}</span>
+              <span style="color: #a0aec0">À: ${tx.to.substring(0, 15)}${tx.to.length > 15 ? '...' : ''}</span>
+            </div>
+            ${tx.txid ? `<div style="margin-top: 4px; font-size: 0.75rem; color: #718096;">ID: ${tx.txid.substring(0, 20)}...</div>` : ''}
+          </div>
+        `;
+      });
+      blockInfo.innerHTML += `</div>`;
+      previewContainer.appendChild(blockInfo);
+    }
+    
+    function updateUI() {
+      document.getElementById("currentDifficulty").textContent = DIFFICULTY;
+      document.getElementById("pendingTx").textContent = mempool.length;
+      
+      // Mise à jour de l'état du bouton en fonction des conditions actuelles
+      updateMiningButtonState();
+      
+      if (selectedWalletKeyPair && selectedWalletIndex !== null) {
+        document.getElementById("currentBalance").textContent = availableWallets[selectedWalletIndex].balance + " €";
+        updateBlockPreview(selectedWalletKeyPair.getPublic('hex'));
+      } else {
+        document.getElementById("currentBalance").textContent = "0 €";
+        updateBlockPreview();
+      }
+      updateCurrentReward();
+    }
+    
+    function updateCurrentReward() {
+      const currentBlockIndex = blockchain.chain.length;
+      const currentDifficulty = blockchain.difficulty || DIFFICULTY;
+      const currentReward = getBlockReward(currentBlockIndex, currentDifficulty);
+      const rewardElement = document.getElementById("currentReward");
+      if (rewardElement) {
+        rewardElement.textContent = currentReward.toFixed(2);
+      }
+      
+      // Mise à jour de l'affichage de la récompense dans les statistiques du réseau
+      const baseRewardElement = document.getElementById("baseReward");
+      if (baseRewardElement) {
+        baseRewardElement.textContent = currentReward.toFixed(0);
+      }
+      
+      console.log(`Récompense pour le bloc #${currentBlockIndex} avec difficulté ${currentDifficulty}: ${currentReward.toFixed(2)}€`);
+    }
+    
+    socket.on("blockBroadcast", (block) => {
+      addLogMessage(`Nouveau bloc reçu du réseau: #${block.index}`, "info");
+    });
+
+    function processMinedTransactions(block) {
+      const wallets = JSON.parse(localStorage.getItem('blockchainWallets')) || [];
+      for (let i = 1; i < block.transactions.length; i++) {
+        const tx = block.transactions[i];
+        if (tx.pending) {
+          const recipientIndex = wallets.findIndex(wallet => wallet.publicKey === tx.to);
+          if (recipientIndex !== -1) {
+            const recipientWallet = wallets[recipientIndex];
+            recipientWallet.balance = (parseFloat(recipientWallet.balance) + parseFloat(tx.amount)).toFixed(2);
+            if (!recipientWallet.receivedTransactions) {
+              recipientWallet.receivedTransactions = [];
+            }
+            recipientWallet.receivedTransactions.push({
+              txId: tx.signature ? tx.signature.substring(0, 10) : 'unsigned',
+              from: tx.from,
+              amount: parseFloat(tx.amount),
+              blockIndex: block.index,
+              timestamp: block.timestamp
+            });
+            addLogMessage(`Transfert de ${tx.amount}€ complété vers ${recipientWallet.username}`, "success");
+          }
+          const senderIndex = wallets.findIndex(wallet => wallet.publicKey === tx.from);
+          if (senderIndex !== -1) {
+            const senderWallet = wallets[senderIndex];
+            if (senderWallet.pendingOutgoing) {
+              const txIndex = senderWallet.pendingOutgoing.findIndex(
+                pending => pending.txId === (tx.signature ? tx.signature.substring(0, 10) : 'unknown')
+              );
+              if (txIndex !== -1) {
+                if (!senderWallet.confirmedTransactions) {
+                  senderWallet.confirmedTransactions = [];
+                }
+                const confirmedTx = senderWallet.pendingOutgoing[txIndex];
+                confirmedTx.confirmed = true;
+                confirmedTx.blockIndex = block.index;
+                senderWallet.confirmedTransactions.push(confirmedTx);
+                senderWallet.pendingOutgoing.splice(txIndex, 1);
+              }
+            }
+          }
+        }
+      }
+      localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+      if (typeof loadWallets === 'function') {
+        loadWallets();
+      }
+    }
+
+    function emitBlock(block) {
+      try {
+        if (!socket || !socketConnected) {
+          console.error("Socket.io n'est pas connecté, impossible d'émettre le bloc");
+          saveBlockLocally(block);
+          return false;
+        }
+        const currentBlockchain = JSON.parse(localStorage.getItem('blockchain') || '[]');
+        if (currentBlockchain.length > 0) {
+          const latestBlock = currentBlockchain[currentBlockchain.length - 1];
+          if (block.previousHash !== latestBlock.hash) {
+            console.log(`Correction du hash précédent avant émission:`);
+            console.log(`De: ${block.previousHash?.substring(0,15)}...`);
+            console.log(`À: ${latestBlock.hash?.substring(0,15)}...`);
+            block.previousHash = latestBlock.hash;
+          }
+        }
+        console.log(`Émission du bloc #${block.index} avec hash ${block.hash.substring(0,8)}... vers le réseau`);
+        socket.emit("newBlock", block, (acknowledgement) => {
+          if (acknowledgement && acknowledgement.success) {
+            console.log(`Bloc #${block.index} émis avec succès et confirmé par le serveur`);
+          } else if (acknowledgement) {
+            console.warn(`Bloc non accepté par le serveur: ${acknowledgement.reason}`);
+            saveBlockLocally(block);
+          }
+        });
+        saveBlockLocally(block);
+        return true;
+      } catch (error) {
+        console.error("Erreur lors de l'émission du bloc:", error);
+        saveBlockLocally(block);
+        return false;
+      }
+    }
+    
+    function saveBlockLocally(block) {
+      try {
+        const blockchainData = localStorage.getItem('blockchain');
+        let blockchain = blockchainData ? JSON.parse(blockchainData) : [];
+        const blockExists = blockchain.some(existingBlock => existingBlock.hash === block.hash);
+        if (!blockExists) {
+          if (blockchain.length > 0) {
+            const latestBlock = blockchain[blockchain.length - 1];
+            if (block.previousHash !== latestBlock.hash) {
+              console.log(`Correction du previousHash avant sauvegarde locale:`);
+              console.log(`De: ${block.previousHash?.substring(0,15)}...`);
+              console.log(`À: ${latestBlock.hash?.substring(0,15)}...`);
+              block.previousHash = latestBlock.hash;
+            }
+          }
+          block.index = blockchain.length;
+          blockchain.push(block);
+          localStorage.setItem('blockchain', JSON.stringify(blockchain));
+          console.log(`Bloc #${block.index} sauvegardé localement avec hash ${block.hash.substring(0,8)}...`);
+        } else {
+          console.log(`Bloc ${block.hash.substring(0,8)}... existe déjà dans localStorage`);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde locale du bloc:", error);
+      }
+    }
+    
+    function updateBlockCount() {
+      const blockchainData = localStorage.getItem('blockchain');
+      const blockchain = blockchainData ? JSON.parse(blockchainData) : [];
+      document.getElementById("blockCount").textContent = blockchain.length;
+    }
+
+    // Mettre à jour l'état du bouton quand le mempool change
+    function updateMiningButtonState() {
+      if (!selectedWalletKeyPair) return;
+      
+      const miningBtn = document.getElementById("startMiningBtn");
+      const blockchainData = localStorage.getItem('blockchain');
+      const existingChain = blockchainData ? JSON.parse(blockchainData) : [];
+      const blockIndex = blockchain.chain.length;
+    
+      // Cas spécial: bloc genesis pas encore miné (peut être miné sans transactions)
+      if (blockIndex === 0 && existingChain.length === 0) {
+        miningBtn.disabled = false;
+        miningBtn.style.opacity = "1";
+        miningBtn.title = "Commencer le minage du bloc genesis";
+      }
+      // Cas normal: il faut des transactions dans le mempool
+      else if (mempool.length > 0) {
+        miningBtn.disabled = false;
+        miningBtn.style.opacity = "1";
+        miningBtn.title = "Commencer le minage";
+      } 
+      // Pas de transactions dans le mempool
+      else {
+        miningBtn.disabled = true;
+        miningBtn.style.opacity = "0.5";
+        miningBtn.title = "Aucune transaction dans le mempool";
+      }
+    }
+    
+    // Nouvelle fonction pour configurer les écouteurs Socket.io
+    function setupSocketListeners() {
+      if (!socket) return;
+      
+      // Réinitialiser les écouteurs pour éviter les doublons
+      socket.off('fullMempool');
+      socket.off('transactionBroadcast');
+      socket.off('blockBroadcast');
+      
+      // Écouter les mises à jour du mempool complet
+      socket.on('fullMempool', function(serverMempool) {
+        console.log(`Mempool complet reçu: ${serverMempool.length} transactions`);
+        mergeServerMempool(serverMempool);
+      });
+      
+      // Écouter les nouvelles transactions
+      socket.on('transactionBroadcast', function(tx) {
+        console.log("Nouvelle transaction diffusée reçue:", tx);
+        
+        // Vérifier si la transaction existe déjà
+        const exists = mempool.some(memTx => 
+          memTx.signature === tx.signature || 
+          (memTx.from === tx.from && memTx.to === tx.to && 
+           memTx.amount === tx.amount && memTx.fee === tx.fee)
+        );
+        
+        if (!exists) {
+          mempool.push(tx);
+          saveMempoolToStorage();
+          document.getElementById("pendingTx").textContent = mempool.length;
+          updateMiningButtonState();
+          addLogMessage(`Nouvelle transaction reçue: ${tx.amount}€ de ${tx.from.substring(0,8)}... vers ${tx.to.substring(0,8)}...`, "info");
+        }
+      });
+      
+      // Écouter les nouveaux blocs pour nettoyer le mempool
+      socket.on('blockBroadcast', function(block) {
+        console.log("Nouveau bloc reçu, nettoyage du mempool...");
+        if (block.transactions && block.transactions.length > 0) {
+          const initialSize = mempool.length;
+          
+          // Filtrer les transactions qui sont dans le bloc
+          mempool = mempool.filter(memTx => {
+            return !block.transactions.some(blockTx => 
+              blockTx.signature === memTx.signature ||
+              (blockTx.from === memTx.from && blockTx.to === memTx.to && 
+               blockTx.amount === memTx.amount)
+            );
+          });
+          
+          if (initialSize !== mempool.length) {
+            console.log(`${initialSize - mempool.length} transaction(s) retirée(s) du mempool après minage`);
+            saveMempoolToStorage();
+            document.getElementById("pendingTx").textContent = mempool.length;
+            updateMiningButtonState();
+          }
+        }
+      });
+    }
+    
+    // Vérifier périodiquement le mempool avec le serveur
+    setInterval(() => {
+      if (socket && socket.connected) {
+        socket.emit('requestFullMempool', { clientId: socket.id || 'unknown' }, function(response) {
+          if (response && response.mempool && Array.isArray(response.mempool)) {
+            mergeServerMempool(response.mempool);
+          }
+        });
+      }
+    }, 60000); // Toutes les minutes
+  </script>
+</body>
+</html>

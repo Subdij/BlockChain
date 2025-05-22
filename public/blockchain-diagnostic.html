@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnostic de la Blockchain</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    pre {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 3px;
+      overflow-x: auto;
+    }
+    .danger {
+      background-color: #f44336;
+    }
+    .danger:hover {
+      background-color: #d32f2f;
+    }
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Diagnostic de la Blockchain</h1>
+    
+    <div class="action-row">
+      <button id="loadBtn">Examiner la blockchain</button>
+      <button id="fixBtn">Réparer les index</button>
+      <button class="danger" id="resetBtn">Réinitialiser la blockchain</button>
+    </div>
+    
+    <h2>Résultats</h2>
+    <pre id="output">Cliquez sur un bouton pour lancer un diagnostic...</pre>
+  </div>
+  
+  <script>
+    document.getElementById('loadBtn').addEventListener('click', examineBlockchain);
+    document.getElementById('fixBtn').addEventListener('click', repairBlockchain);
+    document.getElementById('resetBtn').addEventListener('click', resetBlockchain);
+    
+    // Examiner la blockchain actuelle
+    function examineBlockchain() {
+      const output = document.getElementById('output');
+      output.textContent = "Examen de la blockchain...\n";
+      
+      try {
+        const blockchainData = localStorage.getItem('blockchain');
+        if (!blockchainData) {
+          output.textContent += "⚠️ Aucune blockchain trouvée dans localStorage!\n";
+          return;
+        }
+        
+        const blockchain = JSON.parse(blockchainData);
+        output.textContent += `✅ Blockchain trouvée avec ${blockchain.length} blocs\n\n`;
+        
+        // Vérifier chaque bloc
+        let hasErrors = false;
+        blockchain.forEach((block, expectedIndex) => {
+          output.textContent += `BLOC #${expectedIndex}\n`;
+          output.textContent += `- Index stocké: ${block.index}\n`;
+          output.textContent += `- Hash: ${block.hash?.substring(0, 20)}...\n`;
+          output.textContent += `- Hash précédent: ${block.previousHash?.substring(0, 20)}...\n`;
+          output.textContent += `- Transactions: ${block.transactions?.length || 0}\n`;
+          
+          // Vérifier la cohérence des index
+          if (block.index !== expectedIndex) {
+            output.textContent += `⚠️ ERREUR: L'index ne correspond pas (${block.index} vs ${expectedIndex})\n`;
+            hasErrors = true;
+          }
+          
+          // Vérifier les références de hash
+          if (expectedIndex > 0) {
+            const prevBlock = blockchain[expectedIndex - 1];
+            if (prevBlock && block.previousHash !== prevBlock.hash) {
+              output.textContent += `⚠️ ERREUR: Le hash précédent ne correspond pas au hash du bloc précédent\n`;
+              hasErrors = true;
+            }
+          }
+          
+          output.textContent += "\n";
+        });
+        
+        if (hasErrors) {
+          output.textContent += "⚠️ Des erreurs ont été détectées. Utilisez le bouton 'Réparer les index' pour tenter une correction.\n";
+        } else {
+          output.textContent += "✅ Aucune erreur détectée dans la blockchain.\n";
+        }
+        
+      } catch (error) {
+        output.textContent += `❌ ERREUR: ${error.message}\n`;
+        console.error(error);
+      }
+    }
+    
+    // Réparer les index de la blockchain
+    function repairBlockchain() {
+      const output = document.getElementById('output');
+      output.textContent = "Réparation de la blockchain...\n";
+      
+      try {
+        const blockchainData = localStorage.getItem('blockchain');
+        if (!blockchainData) {
+          output.textContent += "⚠️ Aucune blockchain trouvée dans localStorage!\n";
+          return;
+        }
+        
+        let blockchain = JSON.parse(blockchainData);
+        output.textContent += `Blockchain avec ${blockchain.length} blocs chargée\n`;
+        
+        // 1. Trier par index si possible
+        blockchain.sort((a, b) => {
+          if (typeof a.index === 'number' && typeof b.index === 'number') {
+            return a.index - b.index;
+          }
+          return 0;
+        });
+        
+        // 2. Corriger les index
+        blockchain.forEach((block, idx) => {
+          if (block.index !== idx) {
+            output.textContent += `Correction de l'index: ${block.index} -> ${idx} pour le bloc #${idx}\n`;
+            block.index = idx;
+          }
+        });
+        
+        // 3. Reconstruire les liens de hash pour assurer la cohérence
+        for (let i = 1; i < blockchain.length; i++) {
+          const prevBlock = blockchain[i-1];
+          
+          // Toujours mettre à jour le hash précédent pour maintenir la chaîne
+          if (blockchain[i].previousHash !== prevBlock.hash) {
+            output.textContent += `Correction du hash précédent pour le bloc #${i}\n`;
+            output.textContent += `  De: ${blockchain[i].previousHash?.substring(0,20) || 'undefined'}\n`;
+            output.textContent += `  À: ${prevBlock.hash?.substring(0,20)}\n`;
+            blockchain[i].previousHash = prevBlock.hash;
+          }
+        }
+        
+        // 4. Sauvegarder la blockchain réparée
+        localStorage.setItem('blockchain', JSON.stringify(blockchain));
+        output.textContent += `\n✅ Blockchain réparée et sauvegardée avec ${blockchain.length} blocs\n`;
+        output.textContent += "Veuillez rafraîchir votre visualisateur de blockchain pour voir les changements.\n";
+        
+      } catch (error) {
+        output.textContent += `❌ ERREUR: ${error.message}\n`;
+        console.error(error);
+      }
+    }
+    
+    // Réinitialiser la blockchain (supprimer et créer un nouveau bloc de genèse)
+    function resetBlockchain() {
+      const output = document.getElementById('output');
+      
+      if (!confirm("ATTENTION: Vous allez réinitialiser complètement la blockchain. Cette action est irréversible. Continuer?")) {
+        return;
+      }
+      
+      output.textContent = "Réinitialisation de la blockchain...\n";
+      
+      try {
+        // Créer un bloc de genèse
+        const genesisBlock = {
+          index: 0,
+          timestamp: new Date().toISOString(),
+          transactions: [],
+          previousHash: "0",
+          hash: "0000GenesisBlock" + Math.random().toString(36).substring(2, 10),
+          nonce: 0
+        };
+        
+        // Sauvegarder la nouvelle blockchain avec uniquement le bloc de genèse
+        localStorage.setItem('blockchain', JSON.stringify([genesisBlock]));
+        localStorage.setItem('blockchainDifficulty', "3");
+        
+        output.textContent += "✅ Blockchain réinitialisée avec un nouveau bloc de genèse.\n";
+        output.textContent += "Veuillez rafraîchir votre visualisateur de blockchain pour voir les changements.\n";
+        
+      } catch (error) {
+        output.textContent += `❌ ERREUR: ${error.message}\n`;
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>D'où vient l'argent du minage ?</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 80px 20px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .nav-links a {
+      color: #4a5568;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+      font-size: 1.2rem;
+    }
+    .nav-links a::after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #667eea;
+      transition: width 0.3s ease;
+    }
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+    .nav-links a.active {
+      color: #667eea;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      max-width: 900px;
+    }
+    h1 {
+      text-align: center;
+      color: #2d3748;
+      margin-bottom: 1.5rem;
+      font-size: 2rem;
+    }
+    h2 {
+      color: #4a5568;
+      margin: 1.5rem 0 0.5rem;
+      font-size: 1.4rem;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 0.3rem;
+    }
+    p {
+      margin-bottom: 1rem;
+      line-height: 1.6;
+      color: #4a5568;
+    }
+    .info-box {
+      background-color: #ebf8ff;
+      border-left: 4px solid #4299e1;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+    }
+    .comparison-table th, .comparison-table td {
+      border: 1px solid #e2e8f0;
+      padding: 12px;
+      text-align: left;
+    }
+    .comparison-table th {
+      background-color: #f7fafc;
+      font-weight: 600;
+    }
+    .comparison-table tr:nth-child(even) {
+      background-color: #f7fafc;
+    }
+    .code-block {
+      background-color: #2d3748;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 5px;
+      font-family: monospace;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    .highlight {
+      background-color: #fefcbf;
+      padding: 0 3px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <nav>
+        <div class="nav-container">
+          <div class="nav-links">
+            <a href="./index.html">SHA-256 Hash</a>
+            <a href="./cryptage.html">Encrypt hash</a>
+            <a href="./transaction.html">Transaction</a>
+            <a href="./wallet.html">Wallet</a>
+            <a href="./block.html">Mining</a>
+            <a href="./blockchain-visualizer.html" class="active">Visualiser</a>
+          </div>
+        </div>
+      </nav>
+  </nav>
+  
+  <div class="container">
+    <h1>D'où vient l'argent dans notre système blockchain ?</h1>
+    
+    <p>Une question très importante se pose : <strong>comment est-il possible de gagner de l'argent en minant alors qu'on commence avec 0€ ? D'où vient exactement cet argent ?</strong></p>
+    
+    <div class="info-box">
+      <strong>Point clé :</strong> Dans une blockchain, l'argent n'est pas simplement transféré d'une personne à une autre - il est également <em>créé</em> par le système lui-même selon des règles prédéfinies.
+    </div>
+    
+    <h2>La création monétaire par minage</h2>
+    
+    <p>Dans notre système blockchain (comme dans Bitcoin), l'argent est créé par le protocole lui-même selon des règles fixes et transparentes. Voici comment cela fonctionne :</p>
+    
+    <ol>
+      <li><strong>Émission programmée</strong> : À chaque bloc miné avec succès, le protocole génère automatiquement une récompense (50€ dans notre cas).</li>
+      <li><strong>Transaction "coinbase"</strong> : Cette récompense est créée à partir de rien et accordée au mineur via une transaction spéciale appelée "coinbase".</li>
+      <li><strong>Ajout à la masse monétaire totale</strong> : Ces nouvelles unités sont ajoutées au montant total d'argent en circulation.</li>
+    </ol>
+    
+    <h2>Explication technique</h2>
+    
+    <p>Quand un mineur mine un bloc, la première transaction du bloc (transaction "coinbase") est spéciale :</p>
+    
+    <div class="code-block">
+// Transaction coinbase générée automatiquement<br>
+{<br>
+&nbsp;&nbsp;from: "COINBASE",  // Pas d'expéditeur réel<br>
+&nbsp;&nbsp;to: "[adresse du mineur]",<br>
+&nbsp;&nbsp;amount: "50",      // Récompense fixe<br>
+&nbsp;&nbsp;fee: "0",<br>
+&nbsp;&nbsp;coinbase: true<br>
+}
+    </div>
+    
+    <p>Cette transaction est unique car :</p>
+    <ul>
+      <li>Elle n'a pas d'expéditeur réel (marqué "COINBASE")</li>
+      <li>Les fonds sont créés directement par le protocole</li>
+      <li>Elle est toujours placée en premier dans le bloc</li>
+    </ul>
+    
+    <h2>Comparaison avec le système monétaire traditionnel</h2>
+    
+    <table class="comparison-table">
+      <tr>
+        <th>Système traditionnel (euro, dollar...)</th>
+        <th>Système blockchain</th>
+      </tr>
+      <tr>
+        <td>Création monétaire par les banques centrales</td>
+        <td>Création monétaire par le protocole selon des règles fixes</td>
+      </tr>
+      <tr>
+        <td>Décisions discrétionnaires (par des humains)</td>
+        <td>Règles algorithmiques (programmées à l'avance)</td>
+      </tr>
+      <tr>
+        <td>Quantité potentiellement illimitée</td>
+        <td>Quantité souvent limitée (ex: Bitcoin limité à 21 millions)</td>
+      </tr>
+      <tr>
+        <td>Création par émission de dette</td>
+        <td>Création par récompense de travail (minage)</td>
+      </tr>
+    </table>
+    
+    <h2>Pourquoi ce système ?</h2>
+    
+    <p>Ce mécanisme de création monétaire par minage offre plusieurs avantages :</p>
+    
+    <ul>
+      <li><strong>Distribution équitable</strong> : L'argent est distribué à ceux qui contribuent à la sécurité du réseau</li>
+      <li><strong>Incitation</strong> : Encourage les mineurs à valider les transactions et à sécuriser le réseau</li>
+      <li><strong>Prévisibilité</strong> : Les règles d'émission sont connues à l'avance, contrairement aux monnaies traditionnelles</li>
+      <li><strong>Décentralisation</strong> : Pas besoin d'une autorité centrale pour émettre la monnaie</li>
+    </ul>
+    
+    <h2>Implémentation dans notre simulation</h2>
+    
+    <p>Dans notre code, la création de la récompense de bloc est implémentée comme suit :</p>
+    
+    <div class="code-block">
+// Créer la transaction coinbase (récompense du mineur)<br>
+const coinbaseReward = BLOCK_REWARD + totalFees;<br>
+const coinbaseTx = {<br>
+&nbsp;&nbsp;from: "COINBASE",<br>
+&nbsp;&nbsp;to: minerPublicKey,<br>
+&nbsp;&nbsp;amount: coinbaseReward.toString(),<br>
+&nbsp;&nbsp;fee: "0",<br>
+&nbsp;&nbsp;coinbase: true<br>
+};<br><br>
+// Ajouter la transaction coinbase en première position<br>
+transactions.unshift(coinbaseTx);
+    </div>
+    
+    <p>Puis, une fois le bloc miné, le solde du wallet du mineur est mis à jour pour refléter cette nouvelle création monétaire :</p>
+    
+    <div class="code-block">
+// Mettre à jour le wallet du mineur avec la récompense<br>
+function updateMinerWallet(reward) {<br>
+&nbsp;&nbsp;const minerWallet = availableWallets[selectedWalletIndex];<br>
+&nbsp;&nbsp;minerWallet.balance = (parseFloat(minerWallet.balance) + parseFloat(reward)).toFixed(2);<br>
+&nbsp;&nbsp;// Mettre à jour localStorage<br>
+&nbsp;&nbsp;localStorage.setItem('blockchainWallets', JSON.stringify(availableWallets));<br>
+}
+    </div>
+    
+    <h2>Conclusion</h2>
+    
+    <p>En résumé, l'argent que vous gagnez en minant ne provient pas d'autres utilisateurs mais est <strong>créé par le protocole lui-même</strong>. C'est un mécanisme fondamental qui permet à une blockchain de fonctionner sans autorité centrale tout en distribuant équitablement de nouvelles unités monétaires.</p>
+    
+    <div class="info-box">
+      <p>Dans notre simulation, vous pouvez observer ce mécanisme de création monétaire en action :</p>
+      <ol>
+        <li>Créez un wallet avec un solde initial de 0€</li>
+        <li>Minez un bloc sur la page Mining ou Transaction</li>
+        <li>Observez comment votre wallet reçoit automatiquement 50€ "créés à partir de rien"</li>
+      </ol>
+    </div>
+  </div>
+</body>
+</html>

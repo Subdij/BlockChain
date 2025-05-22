@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blockchain Wallet Manager</title>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/elliptic/6.5.4/elliptic.min.js"></script>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 80px 20px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      justify-content: center;
+      align-items: center;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+    }
+    .nav-links a {
+      color: #4a5568;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+      font-size: 1.2rem;
+    }
+    .nav-links a::after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #667eea;
+      transition: width 0.3s ease;
+    }
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+    .nav-links a.active {
+      color: #667eea;
+    }
+    nav .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 1.5rem;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      width: 100%;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #2d3748;
+      margin-bottom: 1rem;
+    }
+    .form-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .actions-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .delete-btn {
+      background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    button:hover {
+      transform: scale(1.02);
+      opacity: 0.9;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      font-weight: 600;
+      color: #4a5568;
+      background-color: #f7fafc;
+    }
+    tr:hover {
+      background-color: #f7fafc;
+    }
+    .wallet-key {
+      font-family: monospace;
+      background: #edf2f7;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      position: relative;
+    }
+    .wallet-key:hover {
+      background: #e2e8f0;
+    }
+    .wallet-key:active {
+      background: #cbd5e0;
+    }
+    .copy-tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .wallet-key:hover .copy-tooltip {
+      opacity: 0.9;
+    }
+    .copy-success {
+      opacity: 1 !important;
+      background: #48bb78 !important;
+    }
+    .empty-message {
+      text-align: center;
+      color: #718096;
+      padding: 20px;
+      font-style: italic;
+    }
+    .logo {
+      font-weight: 700;
+      color: #2d3748;
+      text-decoration: none;
+      font-size: 1.8rem;
+      transition: all 0.3s ease;
+      margin-right: 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      padding: 0.2rem 1rem;
+    }
+    
+    .logo:hover {
+      transform: scale(1.05);
+    }
+    
+    .copy-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-left: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s ease;
+    }
+    
+    .copy-button:active {
+      background: #a0aec0;
+    }
+    
+    .key-container {
+      display: flex;
+      align-items: center;
+    }
+    
+    
+    .real-time-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 5px;
+      background-color: #cbd5e0;
+      transition: background-color 0.3s ease;
+    }
+    
+    .real-time-connected {
+      background-color: #48bb78;
+      box-shadow: 0 0 5px #48bb78;
+      animation: pulse-green 2s infinite;
+    }
+    
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7); }
+      70% { box-shadow: 0 0 0 5px rgba(72, 187, 120, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(72, 187, 120, 0); }
+    }
+    
+    .synchronized-wallet {
+      animation: highlight-sync 2s ease;
+    }
+    
+    @keyframes highlight-sync {
+      0% { background-color: rgba(72, 187, 120, 0.2); }
+      50% { background-color: rgba(72, 187, 120, 0.4); }
+      100% { background-color: transparent; }
+    }
+    
+    #notifications {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+    
+    .notification {
+      background: rgba(49, 130, 206, 0.9);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      opacity: 0;
+      transform: translateX(50px);
+      transition: all 0.3s ease;
+    }
+    
+    .notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+          <a href="./index.html" class="logo">SUBCHAINE</a>
+          <div class="nav-links">
+            <a href="./SHA-256.html">SHA-256 Hash</a>
+            <a href="./cryptage.html">Encrypt hash</a>
+            <a href="./transaction.html">Transaction</a>
+            <a href="./wallet.html" class="active">Wallet</a>
+            <a href="./block.html">Mining</a>
+            <a href="./blockchain-visualizer.html">Visualiser</a>
+          </div>
+        </div>
+    </nav>
+  
+  <div id="wrapper">
+    <div class="container">
+      <h1>Gestionnaire de Wallets</h1>
+      
+      <div class="form-container">
+        <input type="text" id="username" placeholder="Entrez un pseudonyme" />
+        <button id="createWalletBtn">Créer Wallet</button>
+      </div>
+      
+      <div id="walletList">
+        <table id="walletsTable">
+          <thead>
+            <tr>
+              <th>Pseudo</th>
+              <th>Clé Privée</th>
+              <th>Clé Publique</th>
+              <th>Solde</th>
+            </tr>
+          </thead>
+          <tbody id="walletsTableBody">
+            
+          </tbody>
+        </table>
+        <div id="emptyMessage" class="empty-message">Aucun wallet créé pour le moment.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialisation de la librairie elliptic
+    const ec = new elliptic.ec("secp256k1");
+    
+    // Variables pour Socket.io
+    let socket;
+    let connected = false;
+    
+    // Récupérer ou initialiser les wallets depuis localStorage
+    let wallets = JSON.parse(localStorage.getItem('blockchainWallets')) || [];
+    
+    // Variable globale pour le mempool
+    let mempool = [];
+    
+    // Afficher les wallets au chargement de la page
+    document.addEventListener("DOMContentLoaded", function() {
+      // Clean up any corrupt wallet data on page load
+      cleanupWalletStorage();
+      
+      // Votre code existant...
+      loadMempoolFromStorage();
+      initSocketConnection();
+      updateWalletList();
+    });
+    
+    // Fonction pour ajouter l'indicateur de connexion temps réel
+    function addRealTimeIndicator() {
+      const h1 = document.querySelector('h1');
+      const indicator = document.createElement('span');
+      indicator.id = 'realtime-indicator';
+      indicator.className = 'real-time-indicator';
+      indicator.title = 'Status de connexion au serveur';
+      h1.appendChild(indicator);
+    }
+    
+    // Fonction pour initialiser et gérer la connexion Socket.io
+    function initSocketConnection() {
+      try {
+        console.log("Initialisation de la connexion Socket.io...");
+        
+        // Création d'une nouvelle connexion avec options optimisées
+        socket = io({
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          timeout: 10000,
+          transports: ['websocket', 'polling'] // WebSocket prioritaire, polling en fallback
+        });
+        
+        // Gestion des événements de connexion
+        socket.on('connect', () => {
+          console.log(`Connecté au serveur Socket.IO (ID: ${socket.id})`);
+          connected = true;
+          updateRealTimeIndicator(true);
+          
+          // Réinitialiser tous les écouteurs pour éviter les doublons
+          socket.off('walletSync');
+          socket.off('blockBroadcast');
+          socket.off('clientCount');
+          socket.off('allWallets');
+          socket.off('fullMempool');
+          socket.off('transactionBroadcast');
+          
+          // Écouter les synchronisations de wallet
+          socket.on('walletSync', (updatedWallet) => {
+            console.log("Wallet synchronisé reçu:", updatedWallet);
+            syncWallet(updatedWallet);
+          });
+          
+          // Nouveau: recevoir tous les wallets existants
+          socket.on('allWallets', (allWallets) => {
+            console.log("Tous les wallets reçus:", allWallets);
+            syncAllWallets(allWallets);
+          });
+          
+          // Écouter les nouveaux blocs pour mettre à jour les soldes
+          socket.on('blockBroadcast', (block) => {
+            console.log("Nouveau bloc reçu, vérification des transactions pour mise à jour des wallets");
+            processNewBlockForWallets(block);
+            // Nettoyer le mempool en retirant les transactions incluses dans le bloc
+            cleanMempoolAfterBlock(block);
+          });
+          
+          // Écouter le nombre de clients connectés
+          socket.on('clientCount', (data) => {
+            console.log(`${data.count} clients connectés au serveur`);
+            document.querySelector('h1').textContent = `Gestionnaire de Wallets (${data.count} utilisateurs connectés)`;
+          });
+          
+          // Écouter les mises à jour du mempool complet
+          socket.on('fullMempool', function(serverMempool) {
+            console.log(`Mempool complet reçu: ${serverMempool.length} transactions`);
+            mergeServerMempool(serverMempool);
+          });
+          
+          // Écouter les nouvelles transactions
+          socket.on('transactionBroadcast', function(tx) {
+            console.log("Nouvelle transaction diffusée reçue:", tx);
+            
+            // Vérifier si la transaction existe déjà
+            const exists = mempool.some(memTx => 
+              memTx.signature === tx.signature || 
+              (memTx.from === tx.from && memTx.to === tx.to && 
+               memTx.amount === tx.amount && memTx.fee === tx.fee)
+            );
+            
+            if (!exists) {
+              mempool.push(tx);
+              saveMempoolToStorage();
+              
+              // Vérifier si la transaction concerne l'un de nos wallets
+              const isReceiver = wallets.some(wallet => wallet.publicKey === tx.to);
+              const isSender = wallets.some(wallet => wallet.publicKey === tx.from);
+              
+              if (isReceiver || isSender) {
+                showNotification('Nouvelle transaction', 
+                  `Transaction de ${tx.amount}€ ajoutée au mempool (en attente de minage)`);
+              }
+            }
+          });
+          
+          // Demander tous les wallets existants au serveur
+          console.log("Demande de tous les wallets existants...");
+          socket.emit('requestAllWallets', { clientId: socket.id });
+          
+          // Partager mes wallets actuels avec le serveur
+          if (wallets && wallets.length > 0) {
+            console.log("Partage de mes wallets existants...");
+            socket.emit('shareMyWallets', wallets);
+          }
+          
+          // Demander le mempool actuel au serveur
+          console.log("Demande du mempool actuel...");
+          socket.emit('requestFullMempool', { clientId: socket.id || 'unknown' });
+          
+          // Partager mon mempool avec le serveur si j'en ai un
+          if (mempool && mempool.length > 0) {
+            console.log("Partage de mon mempool local...");
+            socket.emit('shareMyMempool', mempool);
+          }
+          
+          monitorWalletTransactions();
+        });
+        
+        // Gestion des événements de déconnexion
+        socket.on('disconnect', (reason) => {
+          console.log(`Déconnecté du serveur Socket.IO (Raison: ${reason})`);
+          connected = false;
+          updateRealTimeIndicator(false);
+        });
+        
+        // Gestion des tentatives de reconnexion
+        socket.on('reconnecting', (attemptNumber) => {
+          console.log(`Tentative de reconnexion #${attemptNumber}...`);
+        });
+        
+        // Gestion des erreurs
+        socket.on('error', (error) => {
+          console.error('Erreur Socket.IO:', error);
+        });
+        
+        // Écouter les événements de réinitialisation de la blockchain
+        socket.on('blockchainReset', () => {
+          console.log("Événement de réinitialisation de la blockchain reçu - suppression de tous les wallets");
+          
+          // Effacer les wallets du localStorage
+          localStorage.removeItem('blockchainWallets');
+          localStorage.removeItem('blockchainMempool');
+          
+          // Réinitialiser le tableau des wallets et du mempool
+          wallets = [];
+          mempool = [];
+          
+          // Mettre à jour l'interface
+          updateWalletList();
+          
+          showNotification('Réinitialisation de la Blockchain', 'Tous les wallets ont été effacés en raison d\'une réinitialisation de la blockchain');
+        });
+        
+        // Add this event listener
+        socket.on('syncWallets', function(serverWallets) {
+          // Don't automatically accept server wallets - only merge if they don't exist locally
+          if (Array.isArray(serverWallets)) {
+            let newWalletsAdded = false;
+            
+            serverWallets.forEach(serverWallet => {
+              // Check if this wallet already exists locally
+              const exists = wallets.some(localWallet => 
+                localWallet.publicKey === serverWallet.publicKey || 
+                localWallet.privateKey === serverWallet.privateKey
+              );
+              
+              // Only add if it doesn't exist locally - respect local deletions
+              if (!exists) {
+                wallets.push(serverWallet);
+                newWalletsAdded = true;
+              }
+            });
+            
+            // Only update storage and UI if new wallets were added
+            if (newWalletsAdded) {
+              localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+              updateWalletList();
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Erreur lors de l'initialisation de Socket.io:", error);
+      }
+    }
+    
+    // Fonction pour charger le mempool et se synchroniser avec le serveur
+    function loadMempoolFromStorage() {
+      try {
+        // D'abord charger depuis localStorage
+        const storedMempool = localStorage.getItem('blockchainMempool');
+        if (storedMempool) {
+          mempool = JSON.parse(storedMempool);
+          console.log(`Mempool chargé depuis localStorage: ${mempool.length} transactions`);
+        } else {
+          mempool = [];
+        }
+        
+        // Puis synchroniser avec le serveur si connecté
+        if (socket && socket.connected) {
+          socket.emit('requestFullMempool', { clientId: socket.id || 'unknown' }, function(response) {
+            if (response && response.mempool && Array.isArray(response.mempool)) {
+              console.log(`Mempool reçu du serveur: ${response.mempool.length} transactions`);
+              mergeServerMempool(response.mempool);
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement du mempool:", error);
+        mempool = [];
+      }
+    }
+    
+    // Fonction pour fusionner le mempool local avec celui du serveur
+    function mergeServerMempool(serverMempool) {
+      if (!serverMempool || !Array.isArray(serverMempool)) return;
+      
+      let newTransactionsAdded = 0;
+      
+      // Pour chaque transaction du serveur
+      serverMempool.forEach(serverTx => {
+        // Vérifier si elle existe déjà dans notre mempool local
+        const exists = mempool.some(localTx => 
+          localTx.signature === serverTx.signature || 
+          (localTx.from === serverTx.from && 
+           localTx.to === serverTx.to && 
+           localTx.amount === serverTx.amount &&
+           localTx.fee === serverTx.fee)
+        );
+        
+        // Si elle n'existe pas, l'ajouter
+        if (!exists && serverTx.signature) {
+          mempool.push(serverTx);
+          newTransactionsAdded++;
+        }
+      });
+      
+      if (newTransactionsAdded > 0) {
+        console.log(`${newTransactionsAdded} nouvelles transactions ajoutées depuis le serveur`);
+        saveMempoolToStorage();
+        
+        // Vérifier si nous avons des wallets impliqués dans ces nouvelles transactions
+        checkPendingTransactionsForWallets(mempool);
+      }
+    }
+    
+    // Fonction pour sauvegarder le mempool
+    function saveMempoolToStorage() {
+      try {
+        localStorage.setItem('blockchainMempool', JSON.stringify(mempool));
+        console.log(`Mempool sauvegardé dans localStorage: ${mempool.length} transactions`);
+        
+        // Partager le mempool avec le serveur si connecté
+        if (socket && socket.connected && mempool.length > 0) {
+          socket.emit('shareMyMempool', mempool);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde du mempool:", error);
+      }
+    }
+    
+    // Mettre à jour l'indicateur visuel de connexion temps réel
+    function updateRealTimeIndicator(isConnected) {
+      const indicator = document.getElementById('realtime-indicator');
+      if (!indicator) return;
+      
+      if (isConnected) {
+        indicator.classList.add('real-time-connected');
+        indicator.title = 'Connecté au serveur - Synchronisation en temps réel active';
+      } else {
+        indicator.classList.remove('real-time-connected');
+        indicator.title = 'Déconnecté du serveur - Mode hors ligne';
+      }
+    }
+    
+    // Fonction pour synchroniser un wallet reçu du serveur
+    function syncWallet(receivedWallet) {
+      // Vérifier si le wallet existe déjà localement
+      const existingIndex = wallets.findIndex(w => w.publicKey === receivedWallet.publicKey);
+      
+      if (existingIndex !== -1) {
+        // Mettre à jour le wallet existant
+        const oldWallet = wallets[existingIndex];
+        wallets[existingIndex] = receivedWallet;
+        
+        // Mettre à jour localStorage
+        localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+        
+        // Mettre à jour l'interface
+        updateWalletList(receivedWallet.publicKey);
+        
+        // Notifier l'utilisateur si le solde a changé
+        if (oldWallet.balance !== receivedWallet.balance) {
+          showNotification(`Wallet "${receivedWallet.username}" mis à jour`, 
+            `Solde modifié: ${oldWallet.balance}€ → ${receivedWallet.balance}€`);
+        }
+      } else {
+        // Ajouter le nouveau wallet
+        wallets.unshift(receivedWallet);
+        
+        // Sauvegarder dans localStorage
+        localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+        
+        // Mettre à jour l'interface
+        updateWalletList();
+        
+        // Notifier l'utilisateur
+        showNotification(`Nouveau wallet ajouté`, 
+          `Le wallet "${receivedWallet.username}" a été ajouté par un autre utilisateur`);
+      }
+    }
+    
+    // Traiter un nouveau bloc pour mettre à jour les wallets concernés
+    function processNewBlockForWallets(block) {
+      if (!block.transactions || block.transactions.length === 0) return;
+      
+      let walletsUpdated = false;
+      
+      // Parcourir les transactions du bloc
+      block.transactions.forEach(tx => {
+        // Trouver les wallets concernés par cette transaction
+        const senderWallet = wallets.find(w => w.publicKey === tx.from);
+        const receiverWallet = wallets.find(w => w.publicKey === tx.to);
+        
+        // Mise à jour du solde du destinataire
+        if (receiverWallet) {
+          if (tx.from === 'COINBASE') {
+            // Récompense de minage
+            receiverWallet.balance = (parseFloat(receiverWallet.balance) + parseFloat(tx.amount)).toFixed(2);
+            showNotification(`Récompense de minage`, 
+              `${receiverWallet.username} a reçu ${tx.amount}€ de récompense`);
+          } else {
+            // Transaction normale
+            receiverWallet.balance = (parseFloat(receiverWallet.balance) + parseFloat(tx.amount)).toFixed(2);
+          }
+          walletsUpdated = true;
+        }
+        
+        // Enregistrer la mise à jour
+        if (walletsUpdated) {
+          localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+          updateWalletList();
+        }
+      });
+    }
+    
+    // Fonction pour afficher une notification
+    function showNotification(title, message) {
+      const container = document.getElementById('notifications');
+      if (!container) return;
+      
+      const notification = document.createElement('div');
+      notification.className = 'notification';
+      notification.innerHTML = `
+        <strong>${title}</strong>
+        <div>${message}</div>
+      `;
+      
+      container.appendChild(notification);
+      
+      // Animation d'entrée
+      setTimeout(() => notification.classList.add('show'), 10);
+      
+      // Suppression après 5 secondes
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+      }, 5000);
+    }
+    
+    // Fonction modifiée pour créer un wallet et le synchroniser avec les autres clients
+    function createWallet(username) {
+      // Génération de clés cryptographiques réelles
+      const keyPair = ec.genKeyPair();
+      const privateKeyFull = keyPair.getPrivate('hex');
+      const publicKeyFull = keyPair.getPublic('hex');
+      
+      // Création d'un wallet avec solde initial à 0
+      const wallet = {
+        username: username,
+        privateKey: privateKeyFull,
+        privateKeyDisplay: privateKeyFull.substring(0, 6) + '...',
+        publicKey: publicKeyFull,
+        publicKeyDisplay: publicKeyFull.substring(0, 8) + '...',
+        balance: 0,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Ajouter le wallet au début de la liste
+      wallets.unshift(wallet);
+      
+      // Sauvegarder dans localStorage
+      localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+      
+      // Mettre à jour l'affichage
+      updateWalletList();
+      
+      // Réinitialiser le champ de saisie
+      document.getElementById("username").value = "";
+      
+      // Si connecté, diffuser le nouveau wallet aux autres clients
+      if (connected && socket) {
+        try {
+          socket.emit('walletUpdated', wallet);
+          console.log('Nouveau wallet diffusé aux autres clients');
+        } catch (error) {
+          console.error('Erreur lors de la diffusion du wallet:', error);
+        }
+      }
+    }
+    
+    // Fonction modifiée pour mettre à jour la liste des wallets avec effet de synchronisation
+    function updateWalletList(highlightPublicKey = null) {
+      const tableBody = document.getElementById("walletsTableBody");
+      const emptyMessage = document.getElementById("emptyMessage");
+      
+      // Vider le tableau
+      tableBody.innerHTML = '';
+      
+      // Afficher un message si aucun wallet n'existe
+      if (wallets.length === 0) {
+        emptyMessage.style.display = 'block';
+        return;
+      }
+      
+      // Cacher le message "vide"
+      emptyMessage.style.display = 'none';
+      
+      // Ajouter chaque wallet au tableau
+      wallets.forEach(wallet => {
+        const row = document.createElement('tr');
+        
+        // Ajouter la classe pour l'effet de synchronisation si c'est le wallet mis à jour
+        if (highlightPublicKey && wallet.publicKey === highlightPublicKey) {
+          row.classList.add('synchronized-wallet');
+        }
+        
+        row.innerHTML = `
+          <td>${wallet.username}</td>
+          <td>
+            <div class="key-container">
+              <span class="wallet-key" data-key="${wallet.privateKey}">${wallet.privateKeyDisplay}<span class="copy-tooltip">Cliquer pour copier</span></span>
+              <button class="copy-button" data-key="${wallet.privateKey}">Copier</button>
+            </div>
+          </td>
+          <td>
+            <div class="key-container">
+              <span class="wallet-key" data-key="${wallet.publicKey}">${wallet.publicKeyDisplay}<span class="copy-tooltip">Cliquer pour copier</span></span>
+              <button class="copy-button" data-key="${wallet.publicKey}">Copier</button>
+            </div>
+          </td>
+          <td>${wallet.balance} €</td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+      
+      // Ajouter les gestionnaires d'événements pour les boutons de copie
+      document.querySelectorAll('.wallet-key').forEach(el => {
+        el.addEventListener('click', function() {
+          const fullKey = this.getAttribute('data-key');
+          copyToClipboard(fullKey, this);
+        });
+      });
+      
+      document.querySelectorAll('.copy-button').forEach(button => {
+        button.addEventListener('click', function(e) {
+          const fullKey = this.getAttribute('data-key');
+          copyToClipboard(fullKey, this);
+          e.stopPropagation(); // Éviter de déclencher l'événement click du parent
+        });
+      });
+    }
+    
+    // Fonction modifiée pour copier le texte dans le presse-papiers avec méthode de secours
+    function copyToClipboard(text, element) {
+      // Méthode principale avec l'API Clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            showCopySuccess(element);
+          })
+          .catch(err => {
+            console.error('Erreur API Clipboard:', err);
+            fallbackCopyToClipboard(text, element);
+          });
+      } else {
+        // Méthode de secours pour les navigateurs qui ne supportent pas l'API Clipboard
+        fallbackCopyToClipboard(text, element);
+      }
+    }
+    
+    // Méthode de secours pour la copie
+    function fallbackCopyToClipboard(text, element) {
+      try {
+        // Créer un élément temporaire
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        
+        // Le rendre invisible
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.opacity = '0';
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        // Exécuter la commande de copie
+        const successful = document.execCommand('copy');
+        
+        // Nettoyer
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          showCopySuccess(element);
+        } else {
+          alert("Impossible de copier automatiquement. La clé est: " + text);
+        }
+      } catch (err) {
+        console.error('Erreur méthode de secours:', err);
+        // Dernière solution: montrer la clé
+        alert("Impossible de copier automatiquement. La clé est: " + text);
+      }
+    }
+    
+    // Afficher le message de succès de copie
+    function showCopySuccess(element) {
+      // Si c'est le bouton lui-même
+      if (element.tagName === 'BUTTON') {
+        const originalText = element.textContent;
+        element.textContent = "Copié !";
+        element.style.backgroundColor = "#48bb78";
+        element.style.color = "white";
+        
+        setTimeout(() => {
+          element.textContent = originalText;
+          element.style.backgroundColor = "";
+          element.style.color = "";
+        }, 2000);
+      } 
+      // Si c'est un span avec tooltip
+      else {
+        const tooltip = element.querySelector('.copy-tooltip');
+        if (tooltip) {
+          tooltip.textContent = "Copié !";
+          tooltip.classList.add('copy-success');
+          
+          setTimeout(() => {
+            tooltip.textContent = "Cliquer pour copier";
+            tooltip.classList.remove('copy-success');
+          }, 2000);
+        }
+      }
+    }
+    
+    // Gestionnaire d'événement pour le bouton de création de wallet
+    document.getElementById("createWalletBtn").addEventListener("click", function() {
+      const username = document.getElementById("username").value.trim();
+      if (!username) {
+        alert("Veuillez entrer un pseudonyme");
+        return;
+      }
+      
+      // Vérifier si le pseudo existe déjà
+      if (wallets.some(wallet => wallet.username === username)) {
+        alert("Ce pseudonyme est déjà utilisé");
+        return;
+      }
+      
+      createWallet(username);
+    });
+    
+    // Ajout d'une fonction pour suivre les transactions en temps réel
+    function monitorWalletTransactions() {
+      if (!connected || !socket) return;
+      
+      // Réinitialiser l'écouteur pour éviter les doublons
+      socket.off('transactionBroadcast');
+      
+      // Écouter les transactions entrantes pour les wallets gérés
+      socket.on('transactionBroadcast', (tx) => {
+        // Vérifier si nous avons un wallet impliqué dans cette transaction
+        const isReceiver = wallets.some(wallet => wallet.publicKey === tx.to);
+        const isSender = wallets.some(wallet => wallet.publicKey === tx.from);
+        
+        if (isReceiver) {
+          const receiverWallet = wallets.find(wallet => wallet.publicKey === tx.to);
+          showNotification('Transaction en attente', 
+            `${tx.amount}€ en route vers le wallet "${receiverWallet.username}" (en attente de minage)`);
+        }
+        
+        if (isSender) {
+          const senderWallet = wallets.find(wallet => wallet.publicKey === tx.from);
+          showNotification('Transaction envoyée', 
+            `${tx.amount}€ envoyés depuis le wallet "${senderWallet.username}" (en attente de minage)`);
+        }
+      });
+    }
+    
+    // Auto-synchronisation périodique des wallets
+    setInterval(() => {
+      if (connected && socket) {
+        // Demander l'état actuel de la blockchain
+        socket.emit('requestBlockchainState', {}, (state) => {
+          console.log('État du mempool reçu:', state.mempool?.length || 0, 'transactions');
+          
+          // Vérifier si nous avons des wallets impliqués dans des transactions en attente
+          if (state.mempool && state.mempool.length > 0) {
+            checkPendingTransactionsForWallets(state.mempool);
+          }
+        });
+      }
+    }, 30000); // Toutes les 30 secondes
+    
+    // Fonction pour vérifier les transactions en attente
+    function checkPendingTransactionsForWallets(mempool) {
+      // Ne rien faire si nous n'avons pas de wallets ou pas de mempool
+      if (!wallets.length || !mempool.length) return;
+      
+      // Pour chaque wallet, vérifier s'il a des transactions en attente
+      wallets.forEach(wallet => {
+        // Transactions où ce wallet est l'expéditeur
+        const outgoingTx = mempool.filter(tx => tx.from === wallet.publicKey);
+        
+        // Transactions où ce wallet est le destinataire
+        const incomingTx = mempool.filter(tx => tx.to === wallet.publicKey);
+        
+        // Si nous avons des transactions entrantes et qu'elles n'ont pas été notifiées récemment
+        if (incomingTx.length > 0) {
+          // Vérifier si une notification a été envoyée récemment
+          const lastNotifyTime = wallet.lastIncomingNotify || 0;
+          const now = Date.now();
+          
+          // Notifier une fois par minute maximum
+          if (now - lastNotifyTime > 60000) {
+            showNotification('Transactions en attente', 
+              `${incomingTx.length} transaction(s) en attente vers "${wallet.username}"`);
+              
+            // Mettre à jour l'horodatage de notification
+            wallet.lastIncomingNotify = now;
+            localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+          }
+        }
+      });
+    }
+    
+    // Nouvelle fonction pour synchroniser tous les wallets reçus
+    function syncAllWallets(allWallets) {
+      if (!allWallets || !Array.isArray(allWallets) || allWallets.length === 0) return;
+      
+      let walletsAdded = 0;
+      
+      allWallets.forEach(incomingWallet => {
+        // Vérifier si ce wallet existe déjà dans notre liste locale
+        const existingIndex = wallets.findIndex(w => w.publicKey === incomingWallet.publicKey);
+        
+        // Si le wallet n'existe pas localement, l'ajouter
+        if (existingIndex === -1) {
+          wallets.push(incomingWallet);
+          walletsAdded++;
+        }
+      });
+      
+      // Si nous avons ajouté des wallets, mettre à jour l'affichage et localStorage
+      if (walletsAdded > 0) {
+        console.log(`${walletsAdded} nouveaux wallets ajoutés depuis le serveur`);
+        localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+        updateWalletList();
+        showNotification(`${walletsAdded} nouveaux wallets ajoutés`, 
+          `Votre liste de wallets a été mise à jour avec les wallets d'autres utilisateurs`);
+      }
+    }
+    
+    // Nouvelle fonction pour nettoyer le mempool après réception d'un bloc
+    function cleanMempoolAfterBlock(block) {
+      if (!block.transactions || block.transactions.length === 0) return;
+      
+      const initialSize = mempool.length;
+      
+      // Filtrer les transactions qui sont dans le bloc
+      mempool = mempool.filter(memTx => {
+        return !block.transactions.some(blockTx => 
+          blockTx.signature === memTx.signature ||
+          (blockTx.from === memTx.from && blockTx.to === memTx.to && 
+           blockTx.amount === memTx.amount)
+        );
+      });
+      
+      if (initialSize !== mempool.length) {
+        console.log(`${initialSize - mempool.length} transaction(s) retirée(s) du mempool après minage`);
+        saveMempoolToStorage();
+      }
+    }
+    
+    // Vérifier périodiquement le mempool avec le serveur
+    setInterval(() => {
+      if (connected && socket) {
+        socket.emit('requestFullMempool', { clientId: socket.id || 'unknown' }, function(response) {
+          if (response && response.mempool) {
+            mergeServerMempool(response.mempool);
+          }
+        });
+      }
+    }, 60000); // Toutes les minutes
+
+    // Fonction pour nettoyer les données de wallet corrompues
+    function cleanupWalletStorage() {
+      try {
+        // Récupérer les wallets depuis le localStorage
+        let storedWallets = JSON.parse(localStorage.getItem('blockchainWallets')) || [];
+        
+        // Filtrer les wallets invalides
+        const validWallets = storedWallets.filter(wallet => {
+          return wallet.username && wallet.publicKey && wallet.privateKey;
+        });
+        
+        // Si des wallets invalides ont été trouvés, les supprimer
+        if (validWallets.length !== storedWallets.length) {
+          localStorage.setItem('blockchainWallets', JSON.stringify(validWallets));
+          console.log(`Données de wallet corrompues trouvées et nettoyées. ${storedWallets.length - validWallets.length} wallet(s) supprimé(s).`);
+        }
+        
+        // Mettre à jour la variable globale wallets
+        wallets = validWallets;
+      } catch (error) {
+        console.error("Erreur lors du nettoyage des données de wallet:", error);
+      }
+    }
+    
+    // Add this function in your script section
+
+function deleteWallet(index) {
+  if (confirm('Êtes-vous sûr de vouloir supprimer ce wallet? Cette action est irréversible.')) {
+    console.log(`Suppression du wallet à l'index ${index}`);
+    
+    // Save the wallet we're about to delete (for logging)
+    const walletToDelete = wallets[index];
+    
+    // Remove from the wallets array
+    wallets.splice(index, 1);
+    
+    // Update localStorage
+    localStorage.setItem('blockchainWallets', JSON.stringify(wallets));
+    
+    // Clear any zombie data by ensuring format is correct
+    cleanupWalletStorage();
+    
+    // Log for debugging
+    console.log(`Wallet supprimé: ${walletToDelete.username || 'Sans nom'}`);
+    console.log(`Nombre de wallets restants: ${wallets.length}`);
+    
+    // Update the UI
+    updateWalletList();
+    
+    // Notify the user
+    showNotification('Wallet supprimé', 'Le wallet a été supprimé avec succès', 'success');
+    
+    // Inform server about deletion if connected
+    if (socket && socket.connected) {
+      socket.emit('walletDeleted', {
+        publicKey: walletToDelete.publicKey,
+        clientId: socket.id
+      });
+    }
+    
+    return true;
+  }
+  return false;
+}
+
+// Add this cleanup function to ensure localStorage is clean
+function cleanupWalletStorage() {
+  try {
+    // Get current storage
+    const storedData = localStorage.getItem('blockchainWallets');
+    
+    // If null or not valid JSON, reset it
+    if (!storedData) {
+      localStorage.setItem('blockchainWallets', JSON.stringify([]));
+      return;
+    }
+    
+    // Try to parse, if fails, reset it
+    try {
+      const parsedData = JSON.parse(storedData);
+      if (!Array.isArray(parsedData)) {
+        console.warn('Wallet storage was not an array, resetting');
+        localStorage.setItem('blockchainWallets', JSON.stringify([]));
+      }
+    } catch (e) {
+      console.error('Invalid wallet data in localStorage, resetting', e);
+      localStorage.setItem('blockchainWallets', JSON.stringify([]));
+    }
+  } catch (error) {
+    console.error('Error cleaning up wallet storage:', error);
+  }
+}
+  </script>
+</body>
+</html>
